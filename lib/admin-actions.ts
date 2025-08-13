@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@supabase/supabase-js"
+import { revalidatePath } from "next/cache"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -386,11 +387,76 @@ export async function createUser(userData: {
       return profile
     })
 
+    revalidatePath("/admin/users")
     return {
       success: true,
       data: result,
     }
   } catch (error) {
     return handleError(error, "Create user")
+  }
+}
+
+export async function updateUser(
+  userId: string,
+  updates: {
+    full_name?: string
+    role?: string
+    branch_id?: string
+  },
+): Promise<ActionResult> {
+  try {
+    const result = await retryOperation(async () => {
+      const { data, error } = await supabaseAdmin
+        .from("profiles")
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", userId)
+        .select()
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      return data
+    })
+
+    revalidatePath("/admin/users")
+    return {
+      success: true,
+      data: result,
+    }
+  } catch (error) {
+    return handleError(error, "Update user")
+  }
+}
+
+export async function deleteUser(userId: string): Promise<ActionResult> {
+  try {
+    await retryOperation(async () => {
+      // Delete user profile first
+      const { error: profileError } = await supabaseAdmin.from("profiles").delete().eq("id", userId)
+
+      if (profileError) {
+        throw profileError
+      }
+
+      // Delete user from auth
+      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+
+      if (authError) {
+        throw authError
+      }
+    })
+
+    revalidatePath("/admin/users")
+    return {
+      success: true,
+    }
+  } catch (error) {
+    return handleError(error, "Delete user")
   }
 }

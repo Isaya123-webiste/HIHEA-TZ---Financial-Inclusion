@@ -4,146 +4,116 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FileText, Download, Sparkles } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { FileText, Download, Loader2 } from "lucide-react"
 import { generateBranchReport } from "@/lib/ai-actions"
 
 interface AiReportGeneratorProps {
-  branches: Array<{ id: string; name: string }>
-  userRole: string
-  userId?: string
+  branchId?: string
+  userRole?: string
 }
 
-export default function AiReportGenerator({ branches, userRole, userId }: AiReportGeneratorProps) {
-  const [selectedBranch, setSelectedBranch] = useState("")
+export default function AiReportGenerator({ branchId = "", userRole = "user" }: AiReportGeneratorProps) {
   const [selectedPeriod, setSelectedPeriod] = useState("")
   const [generatedReport, setGeneratedReport] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
 
-  const periods = [
-    { value: "weekly", label: "Weekly Report" },
-    { value: "monthly", label: "Monthly Report" },
-    { value: "quarterly", label: "Quarterly Report" },
-    { value: "yearly", label: "Annual Report" },
-  ]
-
-  const generateReport = async () => {
-    if (!selectedBranch || !selectedPeriod) return
+  const handleGenerateReport = async () => {
+    if (!selectedPeriod) return
 
     setIsGenerating(true)
     try {
-      // Mock metrics data - in real app, fetch from your database
-      const mockMetrics = [
-        { name: "Total Members", value: 1250, change: "+12%" },
-        { name: "Active Loans", value: 890, change: "+8%" },
-        { name: "Savings Accounts", value: 1100, change: "+15%" },
-        { name: "Financial Literacy Sessions", value: 45, change: "+20%" },
-      ]
-
-      const result = await generateBranchReport(userId || "anonymous", selectedBranch, selectedPeriod, mockMetrics)
+      const result = await generateBranchReport(branchId, selectedPeriod)
 
       if (result.success) {
         setGeneratedReport(result.report)
       } else {
-        setGeneratedReport("Failed to generate report. Please try again.")
+        setGeneratedReport(`Error generating report: ${result.error}`)
       }
     } catch (error) {
       console.error("Report generation error:", error)
-      setGeneratedReport("An error occurred while generating the report.")
+      setGeneratedReport("Failed to generate report. Please try again.")
     } finally {
       setIsGenerating(false)
     }
   }
 
-  const downloadReport = () => {
+  const handleDownloadReport = () => {
+    if (!generatedReport) return
+
     const blob = new Blob([generatedReport], { type: "text/plain" })
     const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `HIH_Report_${selectedPeriod}_${Date.now()}.txt`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `financial-report-${selectedPeriod}-${Date.now()}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }
 
   return (
-    <Card className="w-full">
+    <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-purple-600" />
-          AI Report Generator
+        <CardTitle className="flex items-center space-x-2">
+          <FileText className="w-5 h-5" />
+          <span>AI Report Generator</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Select Branch</label>
-            <Select value={selectedBranch} onValueChange={setSelectedBranch}>
+      <CardContent className="space-y-6">
+        <div className="flex space-x-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium mb-2">Report Period</label>
+            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
               <SelectTrigger>
-                <SelectValue placeholder="Choose branch" />
+                <SelectValue placeholder="Select reporting period" />
               </SelectTrigger>
               <SelectContent>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
+                <SelectItem value="weekly">Weekly Report</SelectItem>
+                <SelectItem value="monthly">Monthly Report</SelectItem>
+                <SelectItem value="quarterly">Quarterly Report</SelectItem>
+                <SelectItem value="yearly">Annual Report</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Report Period</label>
-            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose period" />
-              </SelectTrigger>
-              <SelectContent>
-                {periods.map((period) => (
-                  <SelectItem key={period.value} value={period.value}>
-                    {period.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex items-end">
+            <Button onClick={handleGenerateReport} disabled={!selectedPeriod || isGenerating} className="min-w-[120px]">
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                "Generate Report"
+              )}
+            </Button>
           </div>
         </div>
 
-        <Button
-          onClick={generateReport}
-          disabled={!selectedBranch || !selectedPeriod || isGenerating}
-          className="w-full bg-purple-600 hover:bg-purple-700"
-        >
-          {isGenerating ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-              Generating AI Report...
-            </>
-          ) : (
-            <>
-              <FileText className="h-4 w-4 mr-2" />
-              Generate AI Report
-            </>
-          )}
-        </Button>
-
         {generatedReport && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Generated Report</h3>
-              <Button
-                onClick={downloadReport}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2 bg-transparent"
-              >
-                <Download className="h-4 w-4" />
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Generated Report</h3>
+              <Button onClick={handleDownloadReport} variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-2" />
                 Download
               </Button>
             </div>
-            <div className="max-h-64 overflow-y-auto p-3 bg-gray-50 rounded-md text-sm whitespace-pre-wrap">
-              {generatedReport}
-            </div>
+            <Textarea
+              value={generatedReport}
+              onChange={(e) => setGeneratedReport(e.target.value)}
+              className="min-h-[400px] font-mono text-sm"
+              placeholder="Generated report will appear here..."
+            />
+          </div>
+        )}
+
+        {!generatedReport && !isGenerating && (
+          <div className="text-center py-12 text-gray-500">
+            <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>
+              Select a reporting period and click "Generate Report" to create an AI-powered financial inclusion report.
+            </p>
           </div>
         )}
       </CardContent>
@@ -151,5 +121,6 @@ export default function AiReportGenerator({ branches, userRole, userId }: AiRepo
   )
 }
 
-// Add named export for compatibility
-export { default as AIReportGenerator } from "./ai-report-generator"
+// Named export for compatibility
+export { AiReportGenerator }
+export const AIReportGenerator = AiReportGenerator

@@ -1,51 +1,70 @@
 "use server"
 
-import { v0Api } from "./v0-api-service"
-import { supabaseAdmin } from "./supabase-admin"
-// Declare the supabaseAdmin variable
+import {
+  generateFinancialReport,
+  analyzeUserBehavior,
+  getChatbotResponse,
+  generateEmailContent,
+  validateAndSuggestFormData,
+  generatePredictions,
+} from "./v0-api-service"
 
-// Server actions for AI-powered features
+// Re-export all AI service functions
+export {
+  generateFinancialReport,
+  analyzeUserBehavior,
+  getChatbotResponse,
+  generateEmailContent,
+  validateAndSuggestFormData,
+  generatePredictions,
+}
 
-export async function generateBranchReport(userId: string, branchId: string, period: string, metrics: any[]) {
+// Additional AI-powered actions specific to the platform
+export async function generateBranchReport(branchId: string, period: string) {
   try {
-    // Get user role for context
-    const { data: profile } = await supabaseAdmin.from("profiles").select("role").eq("id", userId).single()
+    // This would typically fetch real data from the database
+    const mockMetrics = [
+      { name: "Total Members", value: 150, change: "+12%" },
+      { name: "Active Loans", value: 45, change: "+8%" },
+      { name: "Savings Balance", value: 25000, change: "+15%" },
+      { name: "Default Rate", value: 2.1, change: "-0.5%" },
+    ]
 
-    const result = await v0Api.generateFinancialReport({
+    const result = await generateFinancialReport({
       branchId,
       period,
-      metrics,
-      userRole: profile?.role || "user",
+      metrics: mockMetrics,
+      userRole: "branch_manager",
     })
 
     return result
   } catch (error) {
-    console.error("Generate report error:", error)
-    return { error: "Failed to generate report" }
+    console.error("Branch report generation error:", error)
+    return { error: "Failed to generate branch report" }
   }
 }
 
-export async function getAiInsights(userId: string, dataType: string, data: any) {
+export async function getAIAssistance(message: string, userContext: any) {
   try {
-    const result = await v0Api.analyzeUserBehavior({
-      userActivity: data.userActivity || [],
-      branchMetrics: data.branchMetrics || [],
-      timeframe: data.timeframe || "30days",
+    const result = await getChatbotResponse(message, {
+      userRole: userContext.role || "user",
+      branchName: userContext.branchName || "Unknown Branch",
+      recentActivity: userContext.recentActivity || [],
     })
 
     return result
   } catch (error) {
-    console.error("Get insights error:", error)
-    return { error: "Failed to get insights" }
+    console.error("AI assistance error:", error)
+    return { error: "Failed to get AI assistance" }
   }
 }
 
-export async function chatWithAi(userId: string, message: string, context: any) {
+export async function validateFormSubmission(formType: string, formData: any) {
   try {
-    const result = await v0Api.getChatbotResponse(message, context)
+    const result = await validateAndSuggestFormData(formType, formData)
     return result
   } catch (error) {
-    console.error("Chat error:", error)
-    return { error: "Failed to get response" }
+    console.error("Form validation error:", error)
+    return { error: "Failed to validate form" }
   }
 }
