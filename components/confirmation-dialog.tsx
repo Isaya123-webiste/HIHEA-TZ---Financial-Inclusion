@@ -1,57 +1,53 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { AlertTriangle } from "lucide-react"
-
-interface ConfirmationDialogProps {
+export interface ConfirmationDialogProps {
   isOpen: boolean
   onClose: () => void
   onConfirm: () => void
   title: string
-  message: string
+  description: string
   confirmText?: string
   cancelText?: string
-  isDestructive?: boolean
-  loading?: boolean
+  variant?: "default" | "destructive"
 }
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 
 export default function ConfirmationDialog({
   isOpen,
   onClose,
   onConfirm,
   title,
-  message,
+  description,
   confirmText = "Confirm",
   cancelText = "Cancel",
-  isDestructive = false,
-  loading = false,
+  variant = "default",
 }: ConfirmationDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {isDestructive && <AlertTriangle className="h-5 w-5 text-red-600" />}
-            {title}
-          </DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-
-        <div className="py-4">
-          <p className="text-muted-foreground">{message}</p>
-        </div>
-
-        <DialogFooter className="flex gap-2">
-          <Button type="button" variant="outline" onClick={onClose} disabled={loading} className="flex-1">
+        <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+          <Button variant="outline" onClick={onClose}>
             {cancelText}
           </Button>
           <Button
-            type="button"
             onClick={onConfirm}
-            disabled={loading}
-            className={`flex-1 ${isDestructive ? "bg-red-600 hover:bg-red-700" : "bg-red-600 hover:bg-red-700"}`}
+            className={variant === "destructive" ? "bg-red-600 hover:bg-red-700" : ""}
+            style={variant === "default" ? { backgroundColor: "#009edb", color: "white" } : {}}
           >
-            {loading ? "Deleting..." : confirmText}
+            {confirmText}
           </Button>
         </DialogFooter>
       </DialogContent>

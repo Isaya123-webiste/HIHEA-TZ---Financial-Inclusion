@@ -4,16 +4,22 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { LogOut, User, Edit, Shield } from "lucide-react"
+import { LogOut, User, Edit, Shield, MessageCircle, FileText, Brain } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
-import { getUserProfile, checkAdminRole } from "@/lib/admin-actions"
+import { getUserProfile, checkAdminRole, getAllBranches } from "@/lib/admin-actions"
+import AiChatbot from "@/components/ai-chatbot"
+import AiReportGenerator from "@/components/ai-report-generator"
 import type { Profile } from "@/lib/supabase-client"
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [branches, setBranches] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [showAiChat, setShowAiChat] = useState(false)
+  const [showAiReports, setShowAiReports] = useState(false)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -31,6 +37,8 @@ export default function DashboardPage() {
         }
 
         if (user) {
+          setCurrentUser(user)
+
           // Get user profile
           const profileResult = await getUserProfile(user.id)
 
@@ -47,6 +55,12 @@ export default function DashboardPage() {
               router.push("/admin")
               return
             }
+          }
+
+          // Load branches for AI features
+          const branchesResult = await getAllBranches()
+          if (branchesResult.branches) {
+            setBranches(branchesResult.branches)
           }
         } else {
           // No user found, redirect to login
@@ -68,8 +82,10 @@ export default function DashboardPage() {
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_OUT" || !session) {
         setProfile(null)
+        setCurrentUser(null)
         router.push("/")
       } else if (event === "SIGNED_IN" && session?.user) {
+        setCurrentUser(session.user)
         // Reload profile data when user signs in
         const profileResult = await getUserProfile(session.user.id)
         if (profileResult.profile) {
@@ -126,6 +142,25 @@ export default function DashboardPage() {
               <h1 className="text-xl font-bold">HIH Dashboard</h1>
             </div>
             <div className="flex items-center gap-4">
+              {/* AI Features Toggle */}
+              <Button
+                onClick={() => setShowAiChat(!showAiChat)}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <MessageCircle className="h-4 w-4" />
+                AI Assistant
+              </Button>
+              <Button
+                onClick={() => setShowAiReports(!showAiReports)}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Brain className="h-4 w-4" />
+                AI Reports
+              </Button>
               {isAdmin && (
                 <Button
                   onClick={() => router.push("/admin")}
@@ -150,83 +185,130 @@ export default function DashboardPage() {
             Welcome back{profile?.full_name ? `, ${profile.full_name}` : ""}!
             {isAdmin && <span className="ml-2 text-red-600">(Admin)</span>}
           </h2>
-          <p className="text-muted-foreground">Here's your HIH Financial Inclusion dashboard.</p>
+          <p className="text-muted-foreground">
+            Here's your HIH Financial Inclusion dashboard with AI-powered features.
+          </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle>Profile Information</CardTitle>
-              <Button variant="ghost" size="sm">
-                <Edit className="h-4 w-4" />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p>
-                  <strong>Name:</strong> {profile?.full_name || "Not provided"}
-                </p>
-                <p>
-                  <strong>Email:</strong> {profile?.email || "Not provided"}
-                </p>
-                <p>
-                  <strong>Role:</strong> {profile?.role || "user"}
-                </p>
-                <p>
-                  <strong>Member since:</strong>{" "}
-                  {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : "Unknown"}
-                </p>
-                <p>
-                  <strong>Last updated:</strong>{" "}
-                  {profile?.updated_at ? new Date(profile.updated_at).toLocaleDateString() : "Never"}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle>Profile Information</CardTitle>
+                  <Button variant="ghost" size="sm">
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <p>
+                      <strong>Name:</strong> {profile?.full_name || "Not provided"}
+                    </p>
+                    <p>
+                      <strong>Email:</strong> {profile?.email || "Not provided"}
+                    </p>
+                    <p>
+                      <strong>Role:</strong> {profile?.role || "user"}
+                    </p>
+                    <p>
+                      <strong>Member since:</strong>{" "}
+                      {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : "Unknown"}
+                    </p>
+                    <p>
+                      <strong>Last updated:</strong>{" "}
+                      {profile?.updated_at ? new Date(profile.updated_at).toLocaleDateString() : "Never"}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Financial Inclusion</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p>
-                  <strong>Access Rate:</strong> 78%
-                </p>
-                <p>
-                  <strong>Usage Growth:</strong> +24%
-                </p>
-                <p>
-                  <strong>Status:</strong> Active Member
-                </p>
-                <p>
-                  <strong>Account Type:</strong> {profile?.role === "admin" ? "Administrator" : "Standard"}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Financial Inclusion</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <p>
+                      <strong>Access Rate:</strong> 78%
+                    </p>
+                    <p>
+                      <strong>Usage Growth:</strong> +24%
+                    </p>
+                    <p>
+                      <strong>Status:</strong> Active Member
+                    </p>
+                    <p>
+                      <strong>Account Type:</strong> {profile?.role === "admin" ? "Administrator" : "Standard"}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Community Stats</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p>
-                  <strong>Members:</strong> 10K+
-                </p>
-                <p>
-                  <strong>Branches:</strong> 50+
-                </p>
-                <p>
-                  <strong>Satisfaction:</strong> 95%
-                </p>
-                <p>
-                  <strong>Your Contributions:</strong> {isAdmin ? "Admin Access" : "12"}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+            {/* AI Report Generator */}
+            {showAiReports && (
+              <AiReportGenerator branches={branches} userRole={profile?.role || "user"} userId={currentUser?.id} />
+            )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Community Stats</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p>
+                    <strong>Members:</strong> 10K+
+                  </p>
+                  <p>
+                    <strong>Branches:</strong> 50+
+                  </p>
+                  <p>
+                    <strong>Satisfaction:</strong> 95%
+                  </p>
+                  <p>
+                    <strong>Your Contributions:</strong> {isAdmin ? "Admin Access" : "12"}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* AI Chatbot Sidebar */}
+          <div className="space-y-6">
+            {showAiChat && (
+              <AiChatbot
+                userContext={{
+                  userId: currentUser?.id,
+                  userRole: profile?.role || "user",
+                  branchName: "Main Branch", // You can get this from user's branch
+                  recentActivity: ["Logged in", "Viewed dashboard", "Generated report"],
+                }}
+              />
+            )}
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button variant="outline" className="w-full justify-start" onClick={() => setShowAiReports(true)}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Generate AI Report
+                </Button>
+                <Button variant="outline" className="w-full justify-start" onClick={() => setShowAiChat(true)}>
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Ask AI Assistant
+                </Button>
+                <Button variant="outline" className="w-full justify-start">
+                  <Brain className="h-4 w-4 mr-2" />
+                  View AI Insights
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
     </div>

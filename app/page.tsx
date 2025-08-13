@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react"
 import LoginLayout from "@/components/login-layout"
-import { supabase } from "@/lib/supabase-client"
+import { signInAndRedirect } from "@/lib/auth-actions"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -33,30 +33,29 @@ export default function LoginPage() {
     }
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+      const formData = new FormData()
+      formData.append("email", email)
+      formData.append("password", password)
 
-      if (error) {
-        setError(error.message)
-      } else if (data.user) {
-        setSuccess("Login successful!")
+      const result = await signInAndRedirect(formData)
 
-        // Check if user is admin
-        const { data: profileData } = await supabase.from("profiles").select("role").eq("id", data.user.id).single()
+      if (result.error) {
+        setError(result.error)
+        setLoading(false)
+      } else if (result.success) {
+        setSuccess("Login successful! Redirecting...")
 
-        // Redirect to admin dashboard if admin, otherwise to regular dashboard
-        if (profileData?.role === "admin") {
-          router.push("/admin")
-        } else {
-          router.push("/dashboard")
+        // Use router.push for client-side navigation
+        if (result.redirectUrl) {
+          // Short delay to show success message
+          setTimeout(() => {
+            router.push(result.redirectUrl!)
+          }, 500)
         }
       }
     } catch (error) {
       console.error("Sign in error:", error)
       setError("An unexpected error occurred during sign in")
-    } finally {
       setLoading(false)
     }
   }
@@ -119,7 +118,7 @@ export default function LoginPage() {
             <label htmlFor="password" className="text-sm font-medium">
               Password
             </label>
-            <Link href="/forgot-password" className="text-sm text-teal-600 hover:underline">
+            <Link href="/forgot-password" className="text-sm hover:underline" style={{ color: "#009edb" }}>
               Forgot password?
             </Link>
           </div>
@@ -147,7 +146,12 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700" disabled={loading}>
+        <Button
+          type="submit"
+          className="w-full text-white hover:opacity-90"
+          style={{ backgroundColor: "#009edb" }}
+          disabled={loading}
+        >
           {loading ? "Signing in..." : "Sign in"}
         </Button>
 
@@ -199,7 +203,7 @@ export default function LoginPage() {
 
         <div className="text-center text-sm">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-teal-600 hover:underline">
+          <Link href="/register" className="hover:underline" style={{ color: "#009edb" }}>
             Sign up
           </Link>
         </div>

@@ -32,15 +32,29 @@ const config: Config = {
           900: "#134e4a",
           950: "#042f2e",
         },
+        // Replace red with #009edb
+        red: {
+          50: "#f0f8ff",
+          100: "#e1f3ff",
+          200: "#b3ddff",
+          300: "#85c7ff",
+          400: "#57b1ff",
+          500: "#299bff",
+          600: "#009edb", // Main color replacement
+          700: "#0084b3",
+          800: "#006a8a",
+          900: "#005062",
+          950: "#003639",
+        },
+        primary: {
+          DEFAULT: "#ffffff", // White as primary
+          foreground: "hsl(var(--primary-foreground))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",

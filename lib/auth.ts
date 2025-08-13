@@ -99,8 +99,44 @@ export async function signIn(formData: FormData) {
     }
 
     if (data.user) {
-      // Redirect to dashboard on successful login
-      redirect("/dashboard")
+      // Get user profile to determine role-based redirect
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .select("role, status")
+        .eq("id", data.user.id)
+        .single()
+
+      if (profileError || !profile) {
+        return { error: "User profile not found. Please contact administrator." }
+      }
+
+      // Check if user account is active
+      if (profile.status !== "active") {
+        await supabase.auth.signOut()
+        return { error: "Your account is not active. Please contact administrator." }
+      }
+
+      // Redirect based on role to specific paths
+      switch (profile.role) {
+        case "admin":
+          redirect("/admin")
+          break
+        case "branch_manager":
+          redirect("/branch-manager")
+          break
+        case "program_officer":
+          redirect("/program-officer")
+          break
+        case "branch_report_officer":
+          redirect("/branch-report-officer") // FIXED: Changed from "/report-officer"
+          break
+        // Legacy support for old role name
+        case "report_officer":
+          redirect("/branch-report-officer")
+          break
+        default:
+          return { error: "Invalid user role. Please contact administrator." }
+      }
     }
 
     return { success: true }
@@ -144,13 +180,28 @@ export async function getCurrentUser() {
 
 export async function getUserProfile(userId: string) {
   try {
-    const { data: profile, error } = await supabaseAdmin.from("profiles").select("*").eq("id", userId).single()
+    const { data: profile, error } = await supabaseAdmin
+      .from("profiles")
+      .select(`
+        *,
+        branches!profiles_branch_id_fkey (
+          id,
+          name
+        )
+      `)
+      .eq("id", userId)
+      .single()
 
     if (error) {
       return { error: error.message }
     }
 
-    return { profile }
+    return {
+      profile: {
+        ...profile,
+        branch_name: profile.branches?.name || "No Branch",
+      },
+    }
   } catch (error) {
     console.error("Get profile error:", error)
     return { error: "An unexpected error occurred" }
@@ -176,6 +227,68 @@ export async function updateUserProfile(userId: string, updates: { full_name?: s
     return { profile: data, success: true }
   } catch (error) {
     console.error("Update profile error:", error)
+    return { error: "An unexpected error occurred" }
+  }
+}
+
+// Helper function to check user role and redirect if necessary
+export async function checkUserRoleAndRedirect(requiredRole: string) {
+  try {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser()
+
+    if (error || !user) {
+      redirect("/")
+      return { error: "Not authenticated" }
+    }
+
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("role, status")
+      .eq("id", user.id)
+      .single()
+
+    if (profileError || !profile) {
+      redirect("/")
+      return { error: "Profile not found" }
+    }
+
+    if (profile.status !== "active") {
+      redirect("/")
+      return { error: "Account not active" }
+    }
+
+    // Handle both old and new role names
+    const normalizedRole = profile.role === "report_officer" ? "branch_report_officer" : profile.role
+    const normalizedRequiredRole = requiredRole === "report_officer" ? "branch_report_officer" : requiredRole
+
+    if (normalizedRole !== normalizedRequiredRole) {
+      // Redirect to appropriate dashboard based on actual role
+      switch (normalizedRole) {
+        case "admin":
+          redirect("/admin")
+          break
+        case "branch_manager":
+          redirect("/branch-manager")
+          break
+        case "program_officer":
+          redirect("/program-officer")
+          break
+        case "branch_report_officer":
+          redirect("/branch-report-officer") // FIXED: Changed from "/report-officer"
+          break
+        default:
+          redirect("/")
+      }
+      return { error: "Insufficient permissions" }
+    }
+
+    return { user, profile, success: true }
+  } catch (error) {
+    console.error("Check user role error:", error)
+    redirect("/")
     return { error: "An unexpected error occurred" }
   }
 }

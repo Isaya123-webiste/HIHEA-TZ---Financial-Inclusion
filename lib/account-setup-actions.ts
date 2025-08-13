@@ -69,18 +69,19 @@ export async function completeAccountSetup(token: string, newPassword: string) {
     // Update user password in auth
     const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
       password: newPassword,
+      email_confirm: true, // Ensure email is confirmed
     })
 
     if (passwordError) {
       return { error: "Failed to update password" }
     }
 
-    // Update profile to mark setup as complete
+    // Update profile to mark setup as complete and activate user
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
       .update({
         invitation_status: "completed",
-        status: "active", // Activate the user
+        status: "active", // Activate the user - THIS IS KEY!
         invitation_token: null, // Clear the token for security
         temp_password: null, // Clear temp password
         updated_at: new Date().toISOString(),
@@ -100,10 +101,14 @@ export async function completeAccountSetup(token: string, newPassword: string) {
       details: {
         completed_at: new Date().toISOString(),
         setup_method: "invitation_token",
+        role: user.role,
       },
     })
 
-    return { success: true }
+    return {
+      success: true,
+      role: user.role, // Return role for potential redirect
+    }
   } catch (error) {
     console.error("Complete account setup error:", error)
     return { error: "Failed to complete account setup" }

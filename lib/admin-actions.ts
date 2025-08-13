@@ -5,6 +5,10 @@ import { createClient } from "@supabase/supabase-js"
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error("Missing Supabase environment variables")
+}
+
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false,
@@ -12,265 +16,381 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   },
 })
 
-// Check if user is admin
-export async function checkAdminRole(userId: string) {
-  try {
-    const { data: profile, error } = await supabaseAdmin.from("profiles").select("role").eq("id", userId).single()
+export interface UserProfile {
+  id: string
+  full_name: string
+  email: string
+  role: string
+  status: string
+  branch_id: string
+  branch_name?: string
+  created_at: string
+  updated_at: string
+}
 
-    if (error) {
-      return { error: error.message }
+export interface ActionResult {
+  success: boolean
+  profile?: UserProfile
+  data?: any
+  error?: string
+  code?: string
+}
+
+// Enhanced error handling with retry logic
+function handleError(error: any, operation: string): ActionResult {
+  console.error(`${operation} error:`, error)
+
+  // Handle rate limiting
+  if (error?.message?.includes("Too Many Requests") || error?.message?.includes("rate limit")) {
+    return {
+      success: false,
+      error: "Service is temporarily busy. Please try again in a moment.",
+      code: "RATE_LIMIT",
     }
+  }
 
-    return { isAdmin: profile?.role === "admin" }
-  } catch (error) {
-    console.error("Check admin role error:", error)
-    return { error: "Failed to check admin role" }
+  // Handle network errors
+  if (error?.message?.includes("fetch") || error?.message?.includes("network")) {
+    return {
+      success: false,
+      error: "Network connection error. Please check your internet connection.",
+      code: "NETWORK_ERROR",
+    }
+  }
+
+  // Handle JSON parsing errors
+  if (error?.message?.includes("Unexpected token") || error?.message?.includes("not valid JSON")) {
+    return {
+      success: false,
+      error: "Server response error. Please try again.",
+      code: "PARSE_ERROR",
+    }
+  }
+
+  // Handle Supabase specific errors
+  if (error?.code === "PGRST116") {
+    return {
+      success: false,
+      error: "No data found.",
+      code: "NOT_FOUND",
+    }
+  }
+
+  if (error?.code === "23505") {
+    return {
+      success: false,
+      error: "A record with this data already exists.",
+      code: "DUPLICATE",
+    }
+  }
+
+  if (error?.code === "23503") {
+    return {
+      success: false,
+      error: "Invalid reference. Please check the data.",
+      code: "FOREIGN_KEY",
+    }
+  }
+
+  if (error?.message?.includes("permission denied") || error?.message?.includes("insufficient_privilege")) {
+    return {
+      success: false,
+      error: "You don't have permission to perform this action.",
+      code: "PERMISSION_DENIED",
+    }
+  }
+
+  return {
+    success: false,
+    error: error?.message || `Failed to ${operation.toLowerCase()}`,
+    code: "UNKNOWN",
   }
 }
 
-// Get all users (admin only)
-export async function getAllUsers() {
-  try {
-    const { data: profiles, error } = await supabaseAdmin
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false })
+// Retry function with exponential backoff
+async function retryOperation<T>(operation: () => Promise<T>, maxRetries = 3, baseDelay = 1000): Promise<T> {
+  let lastError: any
 
-    if (error) {
-      return { error: error.message }
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await operation()
+    } catch (error) {
+      lastError = error
+
+      // Don't retry on certain errors
+      if (error?.code === "PGRST116" || error?.message?.includes("permission denied")) {
+        throw error
+      }
+
+      // If this is the last attempt, throw the error
+      if (attempt === maxRetries - 1) {
+        throw error
+      }
+
+      // Wait before retrying (exponential backoff)
+      const delay = baseDelay * Math.pow(2, attempt)
+      await new Promise((resolve) => setTimeout(resolve, delay))
     }
-
-    return { users: profiles }
-  } catch (error) {
-    console.error("Get all users error:", error)
-    return { error: "Failed to get users" }
   }
+
+  throw lastError
 }
 
-// Update user profile (admin only)
-export async function updateUserProfile(adminId: string, targetUserId: string, updates: any) {
+export async function getUserProfile(userId: string): Promise<ActionResult> {
   try {
-    // Verify admin role
-    const adminCheck = await checkAdminRole(adminId)
-    if (!adminCheck.isAdmin) {
-      return { error: "Unauthorized: Admin access required" }
+    if (!userId) {
+      return {
+        success: false,
+        error: "User ID is required",
+        code: "INVALID_INPUT",
+      }
     }
 
-    const { data, error } = await supabaseAdmin
-      .from("profiles")
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", targetUserId)
-      .select()
-      .single()
+    const result = await retryOperation(async () => {
+      // First try to get profile with branch info
+      const { data: profile, error } = await supabaseAdmin
+        .from("profiles")
+        .select(`
+          id,
+          full_name,
+          email,
+          role,
+          status,
+          branch_id,
+          created_at,
+          updated_at,
+          branches (
+            id,
+            name
+          )
+        `)
+        .eq("id", userId)
+        .single()
 
-    if (error) {
-      return { error: error.message }
-    }
+      if (error) {
+        throw error
+      }
 
-    // Log the action
-    await logAdminAction(adminId, "UPDATE_USER", targetUserId, updates.email, updates)
-
-    return { profile: data, success: true }
-  } catch (error) {
-    console.error("Update user profile error:", error)
-    return { error: "Failed to update user profile" }
-  }
-}
-
-// Delete user (admin only)
-export async function deleteUser(adminId: string, targetUserId: string, targetEmail: string) {
-  try {
-    // Verify admin role
-    const adminCheck = await checkAdminRole(adminId)
-    if (!adminCheck.isAdmin) {
-      return { error: "Unauthorized: Admin access required" }
-    }
-
-    // Delete from profiles table
-    const { error: profileError } = await supabaseAdmin.from("profiles").delete().eq("id", targetUserId)
-
-    if (profileError) {
-      return { error: profileError.message }
-    }
-
-    // Delete from auth.users using admin client
-    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(targetUserId)
-
-    if (authError) {
-      console.error("Auth deletion error:", authError)
-      // Don't return error as profile is already deleted
-    }
-
-    // Log the action
-    await logAdminAction(adminId, "DELETE_USER", targetUserId, targetEmail, { deleted_at: new Date().toISOString() })
-
-    return { success: true }
-  } catch (error) {
-    console.error("Delete user error:", error)
-    return { error: "Failed to delete user" }
-  }
-}
-
-// Create new user (admin only)
-export async function createUser(
-  adminId: string,
-  userData: { email: string; password: string; full_name: string; role?: string },
-) {
-  try {
-    // Verify admin role
-    const adminCheck = await checkAdminRole(adminId)
-    if (!adminCheck.isAdmin) {
-      return { error: "Unauthorized: Admin access required" }
-    }
-
-    // Create user in auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: userData.email,
-      password: userData.password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: userData.full_name,
-      },
+      return profile
     })
 
-    if (authError) {
-      return { error: authError.message }
+    if (!result) {
+      return {
+        success: false,
+        error: "User profile not found",
+        code: "NOT_FOUND",
+      }
     }
 
-    // Create profile
-    if (authData.user) {
-      const { data: profileData, error: profileError } = await supabaseAdmin
+    // Format the response
+    const formattedProfile: UserProfile = {
+      id: result.id,
+      full_name: result.full_name || "",
+      email: result.email || "",
+      role: result.role || "",
+      status: result.status || "inactive",
+      branch_id: result.branch_id || "",
+      branch_name: result.branches?.name || null,
+      created_at: result.created_at || "",
+      updated_at: result.updated_at || "",
+    }
+
+    return {
+      success: true,
+      profile: formattedProfile,
+    }
+  } catch (error) {
+    return handleError(error, "Get user profile")
+  }
+}
+
+export async function getUserProfileSimple(userId: string): Promise<ActionResult> {
+  try {
+    if (!userId) {
+      return {
+        success: false,
+        error: "User ID is required",
+        code: "INVALID_INPUT",
+      }
+    }
+
+    const result = await retryOperation(async () => {
+      // Simplified query without joins
+      const { data: profile, error } = await supabaseAdmin.from("profiles").select("*").eq("id", userId).single()
+
+      if (error) {
+        throw error
+      }
+
+      return profile
+    })
+
+    if (!result) {
+      return {
+        success: false,
+        error: "User profile not found",
+        code: "NOT_FOUND",
+      }
+    }
+
+    // Get branch name separately if needed
+    let branchName = null
+    if (result.branch_id) {
+      try {
+        const { data: branch } = await supabaseAdmin.from("branches").select("name").eq("id", result.branch_id).single()
+
+        branchName = branch?.name || null
+      } catch (error) {
+        console.warn("Could not fetch branch name:", error)
+      }
+    }
+
+    const formattedProfile: UserProfile = {
+      id: result.id,
+      full_name: result.full_name || "",
+      email: result.email || "",
+      role: result.role || "",
+      status: result.status || "inactive",
+      branch_id: result.branch_id || "",
+      branch_name: branchName,
+      created_at: result.created_at || "",
+      updated_at: result.updated_at || "",
+    }
+
+    return {
+      success: true,
+      profile: formattedProfile,
+    }
+  } catch (error) {
+    return handleError(error, "Get user profile (simple)")
+  }
+}
+
+export async function checkAdminRole(userId: string): Promise<ActionResult> {
+  try {
+    if (!userId) {
+      return {
+        success: false,
+        error: "User ID is required",
+        code: "INVALID_INPUT",
+      }
+    }
+
+    const result = await retryOperation(async () => {
+      const { data: profile, error } = await supabaseAdmin.from("profiles").select("role").eq("id", userId).single()
+
+      if (error) {
+        throw error
+      }
+
+      return profile
+    })
+
+    return {
+      success: true,
+      data: { isAdmin: result?.role === "admin" },
+    }
+  } catch (error) {
+    return handleError(error, "Check admin role")
+  }
+}
+
+export async function getAllUsers(): Promise<ActionResult> {
+  try {
+    const result = await retryOperation(async () => {
+      const { data, error } = await supabaseAdmin.from("profiles").select("*").order("created_at", { ascending: false })
+
+      if (error) {
+        throw error
+      }
+
+      return data
+    })
+
+    return {
+      success: true,
+      data: result || [],
+    }
+  } catch (error) {
+    return handleError(error, "Get all users")
+  }
+}
+
+export async function getAllBranches(): Promise<ActionResult> {
+  try {
+    const result = await retryOperation(async () => {
+      const { data, error } = await supabaseAdmin.from("branches").select("*").order("created_at", { ascending: false })
+
+      if (error) {
+        throw error
+      }
+
+      return data
+    })
+
+    return {
+      success: true,
+      data: result || [],
+    }
+  } catch (error) {
+    return handleError(error, "Get all branches")
+  }
+}
+
+export async function createUser(userData: {
+  email: string
+  password: string
+  full_name: string
+  role: string
+  branch_id?: string
+}): Promise<ActionResult> {
+  try {
+    if (!userData.email || !userData.password || !userData.full_name || !userData.role) {
+      return {
+        success: false,
+        error: "All required fields must be provided",
+        code: "INVALID_INPUT",
+      }
+    }
+
+    const result = await retryOperation(async () => {
+      // Create user in Supabase Auth
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: userData.email,
+        password: userData.password,
+        email_confirm: true,
+      })
+
+      if (authError) {
+        throw authError
+      }
+
+      // Create profile
+      const { data: profile, error: profileError } = await supabaseAdmin
         .from("profiles")
         .insert({
           id: authData.user.id,
-          full_name: userData.full_name,
           email: userData.email,
-          role: userData.role || "user",
+          full_name: userData.full_name,
+          role: userData.role,
+          branch_id: userData.branch_id || null,
+          status: "active",
         })
         .select()
         .single()
 
       if (profileError) {
-        return { error: profileError.message }
+        throw profileError
       }
 
-      // Log the action
-      await logAdminAction(adminId, "CREATE_USER", authData.user.id, userData.email, userData)
-
-      return { user: profileData, success: true }
-    }
-
-    return { error: "Failed to create user" }
-  } catch (error) {
-    console.error("Create user error:", error)
-    return { error: "Failed to create user" }
-  }
-}
-
-// Log admin actions
-async function logAdminAction(
-  adminId: string,
-  action: string,
-  targetUserId?: string,
-  targetEmail?: string,
-  details?: any,
-) {
-  try {
-    await supabaseAdmin.from("user_management").insert({
-      admin_id: adminId,
-      action,
-      target_user_id: targetUserId,
-      target_user_email: targetEmail,
-      details,
+      return profile
     })
+
+    return {
+      success: true,
+      data: result,
+    }
   } catch (error) {
-    console.error("Log admin action error:", error)
-  }
-}
-
-// Get admin activity logs
-export async function getAdminLogs(adminId: string) {
-  try {
-    // Verify admin role
-    const adminCheck = await checkAdminRole(adminId)
-    if (!adminCheck.isAdmin) {
-      return { error: "Unauthorized: Admin access required" }
-    }
-
-    const { data: logs, error } = await supabaseAdmin
-      .from("user_management")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(100)
-
-    if (error) {
-      return { error: error.message }
-    }
-
-    return { logs }
-  } catch (error) {
-    console.error("Get admin logs error:", error)
-    return { error: "Failed to get admin logs" }
-  }
-}
-
-export async function getUserProfile(userId: string) {
-  try {
-    const { data: profile, error } = await supabaseAdmin.from("profiles").select("*").eq("id", userId).single()
-
-    if (error) {
-      return { error: error.message }
-    }
-
-    return { profile }
-  } catch (error) {
-    console.error("Get profile error:", error)
-    return { error: "Failed to get user profile" }
-  }
-}
-
-export async function getAllBranches() {
-  try {
-    const { data: branches, error } = await supabaseAdmin
-      .from("branches")
-      .select("*")
-      .order("created_at", { ascending: false })
-
-    if (error) {
-      return { error: error.message }
-    }
-
-    return { branches }
-  } catch (error) {
-    console.error("Get all branches error:", error)
-    return { error: "Failed to get branches" }
-  }
-}
-
-export async function deleteBranch(adminId: string, branchId: string) {
-  try {
-    // Verify admin role
-    const adminCheck = await checkAdminRole(adminId)
-    if (!adminCheck.isAdmin) {
-      return { error: "Unauthorized: Admin access required" }
-    }
-
-    // Delete branch
-    const { error: branchError } = await supabaseAdmin.from("branches").delete().eq("id", branchId)
-
-    if (branchError) {
-      return { error: branchError.message }
-    }
-
-    // Log the action
-    await logAdminAction(adminId, "DELETE_BRANCH", branchId, undefined, { deleted_at: new Date().toISOString() })
-
-    return { success: true }
-  } catch (error) {
-    console.error("Delete branch error:", error)
-    return { error: "Failed to delete branch" }
+    return handleError(error, "Create user")
   }
 }

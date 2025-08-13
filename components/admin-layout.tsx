@@ -71,7 +71,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <div className="flex h-16 items-center justify-between border-b px-4">
           {!isCollapsed && (
             <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-red-600 p-2">
+              <div className="rounded-lg p-2" style={{ backgroundColor: "#009edb" }}>
                 <span className="material-icons text-white text-lg">admin_panel_settings</span>
               </div>
               <span className="font-bold text-gray-900">HIH Admin</span>
@@ -79,7 +79,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           )}
           {isCollapsed && (
             <div className="flex w-full justify-center">
-              <div className="rounded-lg bg-red-600 p-2">
+              <div className="rounded-lg p-2" style={{ backgroundColor: "#009edb" }}>
                 <span className="material-icons text-white text-lg">admin_panel_settings</span>
               </div>
             </div>
@@ -104,9 +104,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 href={item.href}
                 className={`
                   flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors
-                  ${isActive ? "bg-red-100 text-red-700" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}
+                  ${isActive ? "text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}
                   ${isCollapsed ? "justify-center" : ""}
                 `}
+                style={isActive ? { backgroundColor: "#009edb" } : {}}
                 title={isCollapsed ? item.name : undefined}
               >
                 <span className="material-icons text-xl">{item.icon}</span>

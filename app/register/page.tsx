@@ -237,7 +237,12 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700" disabled={loading}>
+        <Button
+          type="submit"
+          className="w-full text-white hover:opacity-90"
+          style={{ backgroundColor: "#009edb" }}
+          disabled={loading}
+        >
           {loading ? "Creating account..." : "Sign up"}
         </Button>
 
@@ -289,7 +294,7 @@ export default function RegisterPage() {
 
         <div className="text-center text-sm">
           Already have an account?{" "}
-          <Link href="/" className="text-teal-600 hover:underline">
+          <Link href="/" className="hover:underline" style={{ color: "#009edb" }}>
             Sign in
           </Link>
         </div>

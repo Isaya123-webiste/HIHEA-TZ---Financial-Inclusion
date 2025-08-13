@@ -1,91 +1,73 @@
 "use server"
 
-import { createClient } from "@supabase/supabase-js"
+import { supabaseAdmin } from "@/lib/supabase-admin"
 import { checkAdminRole } from "./admin-actions"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-})
-
-// Normalize branch name for duplicate detection
-function normalizeBranchName(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, " ") // Replace multiple spaces with single space
-    .replace(/[^\w\s]/g, "") // Remove special characters
-}
-
-// Check for duplicate branch names
-async function checkDuplicateBranch(
-  branchName: string,
-  excludeId?: string,
-): Promise<{ isDuplicate: boolean; existingBranch?: any }> {
+// Generate branch-specific CSV template with password column
+export async function generateBranchCSVTemplate(adminId: string, branchId: string) {
   try {
-    const normalizedName = normalizeBranchName(branchName)
-
-    // Get all branches to check for duplicates
-    const { data: branches, error } = await supabaseAdmin.from("branches").select("id, name")
-
-    if (error) {
-      console.error("Error checking duplicates:", error)
-      return { isDuplicate: false }
+    // Verify admin role
+    const adminCheck = await checkAdminRole(adminId)
+    if (adminCheck.error || !adminCheck.isAdmin) {
+      return { error: "Unauthorized: Admin access required" }
     }
 
-    // Check if any existing branch has a similar normalized name
-    const duplicate = branches?.find((branch) => {
-      if (excludeId && branch.id === excludeId) {
-        return false // Exclude the current branch when editing
-      }
-      return normalizeBranchName(branch.name) === normalizedName
-    })
+    // Get branch details
+    const { data: branch, error: branchError } = await supabaseAdmin
+      .from("branches")
+      .select("name")
+      .eq("id", branchId)
+      .single()
+
+    if (branchError || !branch) {
+      return { error: "Branch not found" }
+    }
+
+    // Create simple CSV template with password column
+    const csvContent = [
+      "full_name,email,role,password,phone",
+      "John Doe,john.doe@example.com,branch_manager,SecurePass123,+255123456789",
+      "Jane Smith,jane.smith@example.com,program_officer,StrongPass456,+255987654321",
+      "Bob Johnson,bob.johnson@example.com,branch_report_officer,,+255555555555",
+    ].join("\n")
+
+    const timestamp = new Date().toISOString().split("T")[0]
+    const filename = `${branch.name.replace(/\s+/g, "_")}_users_template_${timestamp}.csv`
 
     return {
-      isDuplicate: !!duplicate,
-      existingBranch: duplicate,
+      success: true,
+      csvContent,
+      filename,
+      branchName: branch.name,
     }
   } catch (error) {
-    console.error("Duplicate check error:", error)
-    return { isDuplicate: false }
+    console.error("Generate branch CSV template error:", error)
+    return { error: "Failed to generate CSV template" }
   }
 }
 
-// Create a new branch with minimal data
+// Create a new branch
 export async function createBranch(adminId: string, branchName: string) {
   try {
     // Verify admin role
     const adminCheck = await checkAdminRole(adminId)
-    if (!adminCheck.isAdmin) {
+    if (adminCheck.error || !adminCheck.isAdmin) {
       return { error: "Unauthorized: Admin access required" }
     }
 
-    // Check for duplicates
-    const duplicateCheck = await checkDuplicateBranch(branchName)
-    if (duplicateCheck.isDuplicate) {
-      return {
-        error: `A branch with a similar name "${duplicateCheck.existingBranch?.name}" already exists. Please choose a different name.`,
-      }
-    }
-
-    // Create branch with only the name and minimal required fields
+    // Create branch with minimal required fields
     const { data, error } = await supabaseAdmin
       .from("branches")
       .insert({
         name: branchName,
-        address: "", // Empty instead of default
-        city: "", // Empty instead of default
-        state: "", // Empty instead of default
-        postal_code: "", // Empty instead of default
-        phone: "", // Empty instead of default
-        email: "", // Empty instead of default
-        manager_name: "", // Empty instead of default
-        status: "active", // Set to active instead of pending
+        address: "",
+        city: "",
+        state: "",
+        postal_code: "",
+        phone: "",
+        email: "",
+        manager_name: "",
+        status: "active",
       })
       .select()
       .single()
@@ -94,9 +76,6 @@ export async function createBranch(adminId: string, branchName: string) {
       return { error: error.message }
     }
 
-    // Log the action
-    await logBranchAction(adminId, "CREATE_BRANCH", data.id, branchName)
-
     return { branch: data, success: true }
   } catch (error) {
     console.error("Create branch error:", error)
@@ -104,21 +83,13 @@ export async function createBranch(adminId: string, branchName: string) {
   }
 }
 
-// Update branch name with duplicate detection
+// Update branch
 export async function updateBranch(adminId: string, branchId: string, branchName: string) {
   try {
     // Verify admin role
     const adminCheck = await checkAdminRole(adminId)
-    if (!adminCheck.isAdmin) {
+    if (adminCheck.error || !adminCheck.isAdmin) {
       return { error: "Unauthorized: Admin access required" }
-    }
-
-    // Check for duplicates (excluding current branch)
-    const duplicateCheck = await checkDuplicateBranch(branchName, branchId)
-    if (duplicateCheck.isDuplicate) {
-      return {
-        error: `A branch with a similar name "${duplicateCheck.existingBranch?.name}" already exists. Please choose a different name.`,
-      }
     }
 
     // Update branch name
@@ -136,9 +107,6 @@ export async function updateBranch(adminId: string, branchId: string, branchName
       return { error: error.message }
     }
 
-    // Log the action
-    await logBranchAction(adminId, "UPDATE_BRANCH", branchId, branchName)
-
     return { branch: data, success: true }
   } catch (error) {
     console.error("Update branch error:", error)
@@ -151,12 +119,9 @@ export async function deleteBranch(adminId: string, branchId: string) {
   try {
     // Verify admin role
     const adminCheck = await checkAdminRole(adminId)
-    if (!adminCheck.isAdmin) {
+    if (adminCheck.error || !adminCheck.isAdmin) {
       return { error: "Unauthorized: Admin access required" }
     }
-
-    // Get branch name for logging
-    const { data: branch } = await supabaseAdmin.from("branches").select("name").eq("id", branchId).single()
 
     // Delete branch
     const { error: branchError } = await supabaseAdmin.from("branches").delete().eq("id", branchId)
@@ -165,27 +130,9 @@ export async function deleteBranch(adminId: string, branchId: string) {
       return { error: branchError.message }
     }
 
-    // Log the action
-    await logBranchAction(adminId, "DELETE_BRANCH", branchId, branch?.name || "Unknown")
-
     return { success: true }
   } catch (error) {
     console.error("Delete branch error:", error)
     return { error: "Failed to delete branch" }
-  }
-}
-
-// Log branch actions
-async function logBranchAction(adminId: string, action: string, branchId: string, branchName: string, details?: any) {
-  try {
-    await supabaseAdmin.from("user_management").insert({
-      admin_id: adminId,
-      action,
-      target_user_id: branchId, // Using this field for branch ID
-      target_user_email: branchName, // Using this field for branch name
-      details,
-    })
-  } catch (error) {
-    console.error("Log branch action error:", error)
   }
 }

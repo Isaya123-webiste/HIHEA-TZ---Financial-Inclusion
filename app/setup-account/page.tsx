@@ -81,9 +81,31 @@ export default function SetupAccountPage() {
 
       if (result.success) {
         setSuccess(true)
-        // Redirect to login after 3 seconds
+
+        // Redirect based on user role after 3 seconds
         setTimeout(() => {
-          router.push("/?message=account-setup-complete")
+          const role = result.role || tokenData?.role
+          let redirectPath = "/"
+
+          switch (role) {
+            case "admin":
+              redirectPath = "/admin"
+              break
+            case "branch_manager":
+              redirectPath = "/dashboard/branch-manager"
+              break
+            case "program_officer":
+              redirectPath = "/dashboard/program-officer"
+              break
+            case "branch_report_officer":
+            case "report_officer": // Legacy support
+              redirectPath = "/branch-report-officer"
+              break
+            default:
+              redirectPath = "/?message=account-setup-complete"
+          }
+
+          router.push(redirectPath)
         }, 3000)
       } else {
         setError(result.error || "Failed to complete account setup")
@@ -96,13 +118,32 @@ export default function SetupAccountPage() {
     }
   }
 
+  const getRoleDisplayName = (role: string) => {
+    switch (role) {
+      case "branch_manager":
+        return "Branch Manager"
+      case "program_officer":
+        return "Program Officer"
+      case "branch_report_officer":
+      case "report_officer": // Legacy support
+        return "Branch Report Officer"
+      case "admin":
+        return "Administrator"
+      default:
+        return role?.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()) || "User"
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <Card className="w-full max-w-md">
           <CardContent className="flex items-center justify-center p-8">
             <div className="text-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-600 border-t-transparent mx-auto"></div>
+              <div
+                className="h-8 w-8 animate-spin rounded-full border-4 border-t-transparent mx-auto"
+                style={{ borderColor: "#009edb", borderTopColor: "transparent" }}
+              ></div>
               <p className="mt-2 text-muted-foreground">Validating invitation...</p>
             </div>
           </CardContent>
@@ -116,14 +157,18 @@ export default function SetupAccountPage() {
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle className="flex items-center justify-center gap-2 text-red-600">
+            <CardTitle className="flex items-center justify-center gap-2" style={{ color: "#009edb" }}>
               <AlertCircle className="h-6 w-6" />
               Invalid Invitation
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">{error}</p>
-            <Button onClick={() => router.push("/")} className="w-full bg-teal-600 hover:bg-teal-700">
+            <Button
+              onClick={() => router.push("/")}
+              className="w-full text-white"
+              style={{ backgroundColor: "#009edb" }}
+            >
               Go to Login
             </Button>
           </CardContent>
@@ -144,11 +189,39 @@ export default function SetupAccountPage() {
           </CardHeader>
           <CardContent className="text-center space-y-4">
             <p className="text-muted-foreground">
-              Your account has been successfully set up. You can now sign in with your email and password.
+              Your account has been successfully set up. You can now access your {getRoleDisplayName(tokenData?.role)}{" "}
+              dashboard.
             </p>
-            <p className="text-sm text-green-600">Redirecting to login page in 3 seconds...</p>
-            <Button onClick={() => router.push("/")} className="w-full bg-teal-600 hover:bg-teal-700">
-              Go to Login Now
+            <p className="text-sm text-green-600">Redirecting to your dashboard in 3 seconds...</p>
+            <Button
+              onClick={() => {
+                const role = tokenData?.role
+                let redirectPath = "/"
+
+                switch (role) {
+                  case "admin":
+                    redirectPath = "/admin"
+                    break
+                  case "branch_manager":
+                    redirectPath = "/dashboard/branch-manager"
+                    break
+                  case "program_officer":
+                    redirectPath = "/dashboard/program-officer"
+                    break
+                  case "branch_report_officer":
+                  case "report_officer": // Legacy support
+                    redirectPath = "/branch-report-officer"
+                    break
+                  default:
+                    redirectPath = "/"
+                }
+
+                router.push(redirectPath)
+              }}
+              className="w-full text-white"
+              style={{ backgroundColor: "#009edb" }}
+            >
+              Go to Dashboard Now
             </Button>
           </CardContent>
         </Card>
@@ -160,7 +233,7 @@ export default function SetupAccountPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 rounded-lg bg-teal-600 p-3 w-fit">
+          <div className="mx-auto mb-4 rounded-lg p-3 w-fit" style={{ backgroundColor: "#009edb" }}>
             <User className="h-8 w-8 text-white" />
           </div>
           <CardTitle className="text-2xl">Complete Your Account Setup</CardTitle>
@@ -178,9 +251,7 @@ export default function SetupAccountPage() {
               <Building className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">{tokenData?.branch_name}</span>
             </div>
-            <div className="text-sm text-muted-foreground">
-              Role: {tokenData?.role?.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase())}
-            </div>
+            <div className="text-sm text-muted-foreground">Role: {getRoleDisplayName(tokenData?.role)}</div>
           </div>
 
           <form onSubmit={handleSetupAccount} className="space-y-4">
@@ -248,8 +319,13 @@ export default function SetupAccountPage() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700" disabled={setupLoading}>
-              {setupLoading ? "Setting up your account..." : "Complete Setup"}
+            <Button
+              type="submit"
+              className="w-full text-white"
+              style={{ backgroundColor: "#009edb" }}
+              disabled={setupLoading}
+            >
+              {setupLoading ? "Setting up your account..." : "Complete Setup & Access Dashboard"}
             </Button>
           </form>
 
