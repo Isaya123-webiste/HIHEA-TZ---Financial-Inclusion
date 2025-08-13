@@ -78,10 +78,10 @@ export default function BranchManagerPage() {
             break
           case "branch_report_officer":
           case "report_officer":
-            router.push("/report-officer")
+            router.push("/branch-report-officer")
             break
           default:
-            router.push("/dashboard")
+            router.push("/")
         }
         return
       }
@@ -407,12 +407,12 @@ export default function BranchManagerPage() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Link href="/branch-manager/team">
-                    <Button variant="outline" className="w-full justify-start">
+                    <Button variant="outline" className="w-full justify-start bg-transparent">
                       <Users className="h-4 w-4 mr-2" />
                       View Team Members ({metrics.totalMembers})
                     </Button>
                   </Link>
-                  <Button variant="outline" className="w-full justify-start" disabled>
+                  <Button variant="outline" className="w-full justify-start bg-transparent" disabled>
                     <BarChart3 className="h-4 w-4 mr-2" />
                     Generate Reports
                   </Button>

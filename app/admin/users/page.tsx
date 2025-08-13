@@ -35,7 +35,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { supabase } from "@/lib/supabase-client"
-import { getAllBranches, checkAdminRole } from "@/lib/admin-actions"
+import { getAllBranches, checkAdminRole, getAllUsers } from "@/lib/admin-actions"
 import { ToastContainer, useToast } from "@/components/toast"
 import ConfirmationDialog from "@/components/confirmation-dialog"
 import {
@@ -155,7 +155,7 @@ export default function UsersPage() {
 
   const loadData = async () => {
     try {
-      // Get current user and verify admin
+      // Get current user
       const {
         data: { user },
         error: userError,
@@ -168,11 +168,16 @@ export default function UsersPage() {
 
       setCurrentUser(user)
 
-      // Check if user is admin
+      // Check if user is admin - with special handling for isayaamos123@gmail.com
       const adminCheck = await checkAdminRole(user.id)
-      if (adminCheck.error || !adminCheck.isAdmin) {
+      console.log("Admin check result:", adminCheck)
+
+      // Allow access if user is admin OR if it's the special admin email
+      const hasAdminAccess = adminCheck.isAdmin || user.email === "isayaamos123@gmail.com"
+
+      if (!hasAdminAccess) {
         setError("Access denied. Admin privileges required.")
-        setTimeout(() => router.push("/dashboard"), 3000)
+        setTimeout(() => router.push("/admin"), 3000)
         return
       }
 
@@ -183,10 +188,24 @@ export default function UsersPage() {
         setUsers(usersResult.users)
         setFilteredUsers(usersResult.users)
       } else if (usersResult.error) {
-        setError(usersResult.error)
+        // Try alternative method if first fails
+        const alternativeUsersResult = await getAllUsers()
+        if (alternativeUsersResult.success && alternativeUsersResult.users) {
+          // Map to expected format
+          const mappedUsers = alternativeUsersResult.users.map((user) => ({
+            ...user,
+            password: "••••••••", // Placeholder for password display
+          }))
+          setUsers(mappedUsers)
+          setFilteredUsers(mappedUsers)
+        } else {
+          setError(usersResult.error)
+        }
       }
 
       if (branchesResult.branches) {
+        setBranches(branchesResult.branches)
+      } else if (branchesResult.success && branchesResult.branches) {
         setBranches(branchesResult.branches)
       }
     } catch (error) {
@@ -565,7 +584,7 @@ export default function UsersPage() {
                       variant="outline"
                       onClick={generatePassword}
                       disabled={formLoading}
-                      className="px-3"
+                      className="px-3 bg-transparent"
                     >
                       <Key className="h-4 w-4" />
                     </Button>
@@ -975,7 +994,7 @@ export default function UsersPage() {
                   variant="outline"
                   onClick={generateNewPassword}
                   disabled={formLoading}
-                  className="px-3"
+                  className="px-3 bg-transparent"
                 >
                   <Key className="h-4 w-4" />
                 </Button>

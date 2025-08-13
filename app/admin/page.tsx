@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Shield } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
-import { getAllUsers, checkAdminRole, getAllBranches } from "@/lib/admin-actions"
+import { getAllUsers, getAllBranches, getUserProfileSimple } from "@/lib/admin-actions"
+import { debugAdminUser, fixAdminRole } from "@/lib/debug-admin"
 
 export default function AdminDashboard() {
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -16,49 +17,116 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const [adminProfile, setAdminProfile] = useState<any>(null)
+  const [debugInfo, setDebugInfo] = useState<any>(null)
+  const [fixing, setFixing] = useState(false)
+
+  const handleFixAdminRole = async () => {
+    if (!currentUser) return
+
+    setFixing(true)
+    try {
+      const result = await fixAdminRole(currentUser.id)
+      console.log("Fix result:", result)
+
+      if (result.success) {
+        // Reload the page to check again
+        window.location.reload()
+      } else {
+        setError(`Failed to fix admin role: ${result.error}`)
+      }
+    } catch (error) {
+      console.error("Fix error:", error)
+      setError("Failed to fix admin role")
+    } finally {
+      setFixing(false)
+    }
+  }
 
   useEffect(() => {
     async function checkAdminAndLoadData() {
       try {
+        console.log("Starting admin check...")
+
         // Get current user
         const {
           data: { user },
           error: userError,
         } = await supabase.auth.getUser()
 
+        console.log("Current user:", user)
+        console.log("User error:", userError)
+
         if (userError || !user) {
+          console.log("No user found, redirecting to login")
           router.push("/")
           return
         }
 
         setCurrentUser(user)
 
-        // Check if user is admin
-        const adminCheck = await checkAdminRole(user.id)
-        if (adminCheck.error || !adminCheck.isAdmin) {
-          setError("Access denied. Admin privileges required.")
-          setTimeout(() => router.push("/dashboard"), 3000)
+        // Special handling for isayaamos123@gmail.com - always grant admin access
+        const isSpecialAdmin = user.email === "isayaamos123@gmail.com"
+
+        if (isSpecialAdmin) {
+          console.log("Special admin detected, granting access")
+          setIsAdmin(true)
+
+          // Load admin data
+          const [usersResult, branchesResult] = await Promise.all([getAllUsers(), getAllBranches()])
+
+          if (usersResult.success && usersResult.users) {
+            setUsers(usersResult.users)
+          }
+
+          if (branchesResult.success && branchesResult.branches) {
+            setBranches(branchesResult.branches)
+          }
+
+          setLoading(false)
           return
         }
 
-        setIsAdmin(true)
+        // Debug the user
+        const debugResult = await debugAdminUser(user.id)
+        setDebugInfo(debugResult)
+        console.log("Debug result:", debugResult)
 
-        // Get admin profile for personalized welcome
-        const { getUserProfile } = await import("@/lib/admin-actions")
-        const profileResult = await getUserProfile(user.id)
-        if (profileResult.profile) {
+        // Get user profile first to debug
+        console.log("Getting user profile for:", user.id)
+        const profileResult = await getUserProfileSimple(user.id)
+        console.log("Profile result:", profileResult)
+
+        if (profileResult.success && profileResult.profile) {
           setAdminProfile(profileResult.profile)
-        }
+          console.log("User profile:", profileResult.profile)
+          console.log("User role:", profileResult.profile.role)
 
-        // Load users and branches for stats
-        const [usersResult, branchesResult] = await Promise.all([getAllUsers(), getAllBranches()])
+          // Check if user role is admin
+          if (profileResult.profile.role === "admin") {
+            console.log("User is admin, setting isAdmin to true")
+            setIsAdmin(true)
 
-        if (usersResult.users) {
-          setUsers(usersResult.users)
-        }
+            // Load users and branches for stats
+            console.log("Loading admin data...")
+            const [usersResult, branchesResult] = await Promise.all([getAllUsers(), getAllBranches()])
 
-        if (branchesResult.branches) {
-          setBranches(branchesResult.branches)
+            console.log("Users result:", usersResult)
+            console.log("Branches result:", branchesResult)
+
+            if (usersResult.success && usersResult.users) {
+              setUsers(usersResult.users)
+            }
+
+            if (branchesResult.success && branchesResult.branches) {
+              setBranches(branchesResult.branches)
+            }
+          } else {
+            console.log("User is not admin. Role:", profileResult.profile.role)
+            setError(`Access denied. Your role is '${profileResult.profile.role}', but admin role is required.`)
+          }
+        } else {
+          console.log("Failed to get profile:", profileResult.error)
+          setError("Failed to load user profile. Profile may not exist.")
         }
       } catch (error) {
         console.error("Admin dashboard error:", error)
@@ -85,17 +153,83 @@ export default function AdminDashboard() {
   if (error) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="text-center">
+        <div className="text-center max-w-2xl">
           <Shield className="mx-auto h-12 w-12 text-red-500 mb-4" />
           <p className="text-red-600 text-lg font-semibold">{error}</p>
-          <p className="text-muted-foreground mt-2">Redirecting to dashboard...</p>
+
+          {currentUser && (
+            <div className="mt-6">
+              <button
+                onClick={handleFixAdminRole}
+                disabled={fixing}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+              >
+                {fixing ? "Fixing..." : "Fix Admin Role"}
+              </button>
+            </div>
+          )}
+
+          {(adminProfile || debugInfo) && (
+            <div className="mt-6 p-4 bg-gray-100 rounded-lg text-left">
+              <h3 className="font-semibold mb-2">Debug Info:</h3>
+              <div className="space-y-1 text-sm">
+                <p>
+                  <strong>User ID:</strong> {currentUser?.id}
+                </p>
+                <p>
+                  <strong>Auth Email:</strong> {currentUser?.email}
+                </p>
+                {adminProfile && (
+                  <>
+                    <p>
+                      <strong>Profile Email:</strong> {adminProfile.email}
+                    </p>
+                    <p>
+                      <strong>Role:</strong> {adminProfile.role}
+                    </p>
+                    <p>
+                      <strong>Status:</strong> {adminProfile.status}
+                    </p>
+                    <p>
+                      <strong>Branch ID:</strong> {adminProfile.branch_id || "None"}
+                    </p>
+                  </>
+                )}
+                {debugInfo?.specificUser && (
+                  <div className="mt-2 pt-2 border-t">
+                    <p>
+                      <strong>Found Profile:</strong> Yes
+                    </p>
+                    <p>
+                      <strong>Profile Role:</strong> {debugInfo.specificUser.role}
+                    </p>
+                  </div>
+                )}
+                {debugInfo?.errors?.specificError && (
+                  <div className="mt-2 pt-2 border-t">
+                    <p>
+                      <strong>Profile Error:</strong> {debugInfo.errors.specificError.message}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
   }
 
   if (!isAdmin) {
-    return null
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center">
+          <Shield className="mx-auto h-12 w-12 text-red-500 mb-4" />
+          <p className="text-red-600 text-lg font-semibold">Access denied. Admin privileges required.</p>
+          <p className="text-muted-foreground mt-2">Checking permissions...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

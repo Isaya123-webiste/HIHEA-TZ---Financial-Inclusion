@@ -1,7 +1,6 @@
 "use server"
 
 import { createClient } from "@supabase/supabase-js"
-import { redirect } from "next/navigation"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -116,27 +115,31 @@ export async function signIn(formData: FormData) {
         return { error: "Your account is not active. Please contact administrator." }
       }
 
-      // Redirect based on role to specific paths
+      // Return redirect URL based on role instead of using redirect()
+      let redirectUrl = "/program-officer" // Default
+
       switch (profile.role) {
         case "admin":
-          redirect("/admin")
+          redirectUrl = "/admin"
           break
         case "branch_manager":
-          redirect("/branch-manager")
+          redirectUrl = "/branch-manager"
           break
         case "program_officer":
-          redirect("/program-officer")
+          redirectUrl = "/program-officer"
           break
         case "branch_report_officer":
-          redirect("/branch-report-officer") // FIXED: Changed from "/report-officer"
+          redirectUrl = "/branch-report-officer"
           break
         // Legacy support for old role name
         case "report_officer":
-          redirect("/branch-report-officer")
+          redirectUrl = "/branch-report-officer"
           break
         default:
           return { error: "Invalid user role. Please contact administrator." }
       }
+
+      return { success: true, redirectUrl }
     }
 
     return { success: true }
@@ -152,12 +155,11 @@ export async function signOut() {
     if (error) {
       return { error: error.message }
     }
+    return { success: true, redirectUrl: "/" }
   } catch (error) {
     console.error("Sign out error:", error)
     return { error: "An unexpected error occurred during sign out" }
   }
-
-  redirect("/")
 }
 
 export async function getCurrentUser() {
@@ -240,8 +242,7 @@ export async function checkUserRoleAndRedirect(requiredRole: string) {
     } = await supabase.auth.getUser()
 
     if (error || !user) {
-      redirect("/")
-      return { error: "Not authenticated" }
+      return { error: "Not authenticated", redirectUrl: "/" }
     }
 
     const { data: profile, error: profileError } = await supabaseAdmin
@@ -251,13 +252,11 @@ export async function checkUserRoleAndRedirect(requiredRole: string) {
       .single()
 
     if (profileError || !profile) {
-      redirect("/")
-      return { error: "Profile not found" }
+      return { error: "Profile not found", redirectUrl: "/" }
     }
 
     if (profile.status !== "active") {
-      redirect("/")
-      return { error: "Account not active" }
+      return { error: "Account not active", redirectUrl: "/" }
     }
 
     // Handle both old and new role names
@@ -265,30 +264,32 @@ export async function checkUserRoleAndRedirect(requiredRole: string) {
     const normalizedRequiredRole = requiredRole === "report_officer" ? "branch_report_officer" : requiredRole
 
     if (normalizedRole !== normalizedRequiredRole) {
-      // Redirect to appropriate dashboard based on actual role
+      // Return redirect URL based on actual role instead of using redirect()
+      let redirectUrl = "/"
+
       switch (normalizedRole) {
         case "admin":
-          redirect("/admin")
+          redirectUrl = "/admin"
           break
         case "branch_manager":
-          redirect("/branch-manager")
+          redirectUrl = "/branch-manager"
           break
         case "program_officer":
-          redirect("/program-officer")
+          redirectUrl = "/program-officer"
           break
         case "branch_report_officer":
-          redirect("/branch-report-officer") // FIXED: Changed from "/report-officer"
+          redirectUrl = "/branch-report-officer"
           break
         default:
-          redirect("/")
+          redirectUrl = "/"
       }
-      return { error: "Insufficient permissions" }
+
+      return { error: "Insufficient permissions", redirectUrl }
     }
 
     return { user, profile, success: true }
   } catch (error) {
     console.error("Check user role error:", error)
-    redirect("/")
-    return { error: "An unexpected error occurred" }
+    return { error: "An unexpected error occurred", redirectUrl: "/" }
   }
 }
