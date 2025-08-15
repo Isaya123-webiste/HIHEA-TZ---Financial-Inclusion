@@ -17,7 +17,6 @@ import {
   Search,
   FileText,
   Edit,
-  Calendar,
   Users,
   Target,
   Menu,
@@ -34,6 +33,7 @@ import {
   ArrowLeft,
   Clock,
   User,
+  MapPin,
 } from "lucide-react"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase-client"
@@ -863,7 +863,7 @@ export default function ProgramOfficerFormsPage() {
           <div className="flex items-center justify-between h-16 px-4">
             {!sidebarCollapsed && (
               <div className="flex items-center gap-2">
-                <div className="bg-white p-2 rounded-lg">
+                <div className="bg-white p-2 rounded-lg shadow-md">
                   <Target className="h-6 w-6 text-[#009edb]" />
                 </div>
                 <div className="text-white">
@@ -874,7 +874,7 @@ export default function ProgramOfficerFormsPage() {
             )}
             {sidebarCollapsed && (
               <div className="flex items-center justify-center w-full">
-                <div className="bg-white p-2 rounded-lg">
+                <div className="bg-white p-2 rounded-lg shadow-md">
                   <Target className="h-6 w-6 text-[#009edb]" />
                 </div>
               </div>
@@ -896,8 +896,8 @@ export default function ProgramOfficerFormsPage() {
                 key={index}
                 href={item.href}
                 className={`
-                  flex items-center gap-3 w-full p-3 rounded-lg text-white transition-colors
-                  ${item.active ? "bg-blue-500" : "hover:bg-blue-500"}
+                  flex items-center gap-3 w-full p-3 rounded-lg text-white transition-all duration-200
+                  ${item.active ? "bg-white/20 shadow-lg" : "hover:bg-white/10"}
                   ${sidebarCollapsed ? "justify-center" : ""}
                 `}
                 title={sidebarCollapsed ? item.label : undefined}
@@ -914,7 +914,7 @@ export default function ProgramOfficerFormsPage() {
             <button
               onClick={handleSignOut}
               className={`
-                flex items-center gap-3 w-full p-3 rounded-lg text-white hover:bg-blue-500 transition-colors
+                flex items-center gap-3 w-full p-3 rounded-lg text-white hover:bg-white/10 transition-colors
                 ${sidebarCollapsed ? "justify-center" : ""}
               `}
               title={sidebarCollapsed ? "Sign Out" : undefined}
@@ -929,7 +929,7 @@ export default function ProgramOfficerFormsPage() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile Header */}
-        <div className="flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden">
+        <div className="flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden shadow-sm">
           <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
@@ -938,23 +938,30 @@ export default function ProgramOfficerFormsPage() {
         </div>
 
         {/* Desktop Header */}
-        <div className="hidden lg:flex h-16 items-center justify-between border-b bg-white px-6">
+        <div className="hidden lg:flex h-20 items-center justify-between border-b bg-white px-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Branch Report Forms</h1>
-            <p className="text-gray-600 text-sm">Review and edit forms submitted by Branch Report Officers</p>
+            <h1 className="text-3xl font-bold text-gray-900">Branch Report Forms</h1>
+            <p className="text-gray-600 text-sm mt-1">Review and manage forms submitted by Branch Report Officers</p>
           </div>
-          <Button onClick={() => loadForms(profile.branch_id)} variant="outline" disabled={refreshing}>
+          <Button
+            onClick={() => loadForms(profile.branch_id)}
+            variant="outline"
+            disabled={refreshing}
+            className="shadow-sm hover:shadow-md transition-shadow"
+          >
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto bg-gray-50 px-6 py-6">
+        <div className="flex-1 overflow-auto px-6 py-6">
           {/* Message */}
           {message && (
-            <div className="mb-6">
-              <Alert className={messageType === "error" ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}>
+            <div className="mb-8">
+              <Alert
+                className={`shadow-md ${messageType === "error" ? "border-red-200 bg-red-50" : "border-green-200 bg-green-50"}`}
+              >
                 {messageType === "error" ? (
                   <AlertCircle className="h-4 w-4 text-red-600" />
                 ) : (
@@ -968,54 +975,52 @@ export default function ProgramOfficerFormsPage() {
           )}
 
           {/* Statistics Cards */}
-          {statistics && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Total Forms</p>
-                      <p className="text-2xl font-bold">{statistics.total_forms || 0}</p>
-                    </div>
-                    <FileText className="h-8 w-8 text-blue-600" />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <Card className="bg-white border shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Total Forms</p>
+                    <p className="text-2xl font-bold">{statistics.total_forms || 0}</p>
                   </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Submitted</p>
-                      <p className="text-2xl font-bold">{statistics.submitted_forms || 0}</p>
-                    </div>
-                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  <FileText className="h-8 w-8 text-blue-600" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Submitted</p>
+                    <p className="text-2xl font-bold">{statistics.submitted_forms || 0}</p>
                   </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Avg Members</p>
-                      <p className="text-2xl font-bold">{Math.round(statistics.avg_members || 0)}</p>
-                    </div>
-                    <Users className="h-8 w-8 text-purple-600" />
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Avg Members</p>
+                    <p className="text-2xl font-bold">{Math.round(statistics.avg_members || 0)}</p>
                   </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-gray-600">Total Loans</p>
-                      <p className="text-lg font-bold">{formatCurrency(statistics.total_loan_approved || 0)}</p>
-                    </div>
-                    <DollarSign className="h-8 w-8 text-orange-600" />
+                  <Users className="h-8 w-8 text-purple-600" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-white border shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Total Loans</p>
+                    <p className="text-lg font-bold">{formatCurrency(statistics.total_loan_approved || 0)}</p>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+                  <DollarSign className="h-8 w-8 text-orange-600" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Search and Filters */}
           <div className="mb-6 space-y-4">
@@ -1037,7 +1042,7 @@ export default function ProgramOfficerFormsPage() {
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="submitted">Submitted</SelectItem>
-                    <SelectItem value="reviewed">Under Review</SelectItem>
+                    <SelectItem value="reviewed">Submitted</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1049,11 +1054,11 @@ export default function ProgramOfficerFormsPage() {
             </div>
           </div>
 
-          {/* Forms List */}
+          {/* Forms Grid */}
           {filteredForms.length > 0 ? (
             <div className="space-y-4">
               {filteredForms.map((form) => (
-                <Card key={form.id} className="bg-white shadow-sm border-0 hover:shadow-md transition-shadow">
+                <Card key={form.id} className="bg-white shadow-sm border hover:shadow-md transition-shadow">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -1068,8 +1073,12 @@ export default function ProgramOfficerFormsPage() {
                             <span>Submitted by: {form.creator_name || "Unknown User"}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
+                            <Clock className="h-4 w-4" />
                             <span>{formatDate(form.submitted_at || form.created_at)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4" />
+                            <span>{form.location}</span>
                           </div>
                         </div>
 
@@ -1100,7 +1109,7 @@ export default function ProgramOfficerFormsPage() {
                           className="bg-[#009edb] hover:bg-[#007bb5] text-white"
                         >
                           <Edit className="h-4 w-4 mr-2" />
-                          Edit
+                          Review
                         </Button>
                       </div>
                     </div>

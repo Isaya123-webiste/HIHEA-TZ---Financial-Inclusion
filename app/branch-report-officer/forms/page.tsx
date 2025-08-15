@@ -28,10 +28,10 @@ import {
   Search,
   Edit,
   Trash2,
-  Calendar,
-  Users,
   Filter,
   RefreshCw,
+  AlertTriangle,
+  MessageSquare,
 } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 import { getUserProfile } from "@/lib/admin-actions"
@@ -70,6 +70,7 @@ export default function BranchReportOfficerForms() {
   const [currentFieldIndex, setCurrentFieldIndex] = useState(0)
   const [formData, setFormData] = useState<FormData>({})
   const [editingFormId, setEditingFormId] = useState<string | null>(null)
+  const [editingForm, setEditingForm] = useState<FormSubmission | null>(null)
   const [showCloseConfirmation, setShowCloseConfirmation] = useState(false)
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -331,6 +332,14 @@ export default function BranchReportOfficerForms() {
       required: true,
       placeholder: "0",
     },
+    {
+      id: "notes",
+      name: "notes",
+      label: "Additional Notes",
+      type: "textarea",
+      required: false,
+      placeholder: "Add any additional notes or comments...",
+    },
   ]
 
   useEffect(() => {
@@ -441,6 +450,7 @@ export default function BranchReportOfficerForms() {
     setCurrentFieldIndex(0)
     setFormData({})
     setEditingFormId(null)
+    setEditingForm(null)
   }
 
   const handleEditForm = async (formId: string) => {
@@ -458,6 +468,7 @@ export default function BranchReportOfficerForms() {
 
         setFormData(editData)
         setEditingFormId(formId)
+        setEditingForm(form)
         setIsFormOpen(true)
         setCurrentFieldIndex(0)
       } else {
@@ -495,22 +506,44 @@ export default function BranchReportOfficerForms() {
 
   const handleCloseForm = async () => {
     if (Object.keys(formData).length > 0) {
-      // Auto-save as draft before showing confirmation
-      await handleSaveDraft(true)
       setShowCloseConfirmation(true)
     } else {
       setIsFormOpen(false)
       setCurrentFieldIndex(0)
       setFormData({})
       setEditingFormId(null)
+      setEditingForm(null)
     }
   }
 
-  const handleConfirmClose = () => {
+  const handleConfirmClose = async () => {
+    // Save draft before closing if there's data
+    if (Object.keys(formData).length > 0) {
+      try {
+        setSaving(true)
+        const result = await handleSaveDraft(true)
+        if (result && !result.success) {
+          showMessage("Failed to save draft before closing", "error")
+          setShowCloseConfirmation(false)
+          return // Don't close if save failed
+        }
+        // Reload forms to ensure the new draft appears in the list
+        await loadForms(profile.id)
+      } catch (error) {
+        console.error("Error saving draft before close:", error)
+        showMessage("Error saving draft", "error")
+        setShowCloseConfirmation(false)
+        return
+      } finally {
+        setSaving(false)
+      }
+    }
+
     setIsFormOpen(false)
     setCurrentFieldIndex(0)
     setFormData({})
     setEditingFormId(null)
+    setEditingForm(null)
     setShowCloseConfirmation(false)
   }
 
@@ -551,13 +584,44 @@ export default function BranchReportOfficerForms() {
         if (result.data && !editingFormId) {
           setEditingFormId(result.data.id)
         }
-        await loadForms(profile.id)
+
+        // Update the local forms state with the updated data
+        if (result.data) {
+          setForms((prevForms) => {
+            const existingIndex = prevForms.findIndex((form) => form.id === result.data.id)
+            if (existingIndex >= 0) {
+              // Update existing form
+              const updatedForms = [...prevForms]
+              updatedForms[existingIndex] = result.data
+              return updatedForms
+            } else {
+              // Add new form
+              return [result.data, ...prevForms]
+            }
+          })
+          setFilteredForms((prevForms) => {
+            const existingIndex = prevForms.findIndex((form) => form.id === result.data.id)
+            if (existingIndex >= 0) {
+              // Update existing form
+              const updatedForms = [...prevForms]
+              updatedForms[existingIndex] = result.data
+              return updatedForms
+            } else {
+              // Add new form
+              return [result.data, ...prevForms]
+            }
+          })
+        }
+
+        return result
       } else {
         showMessage(result.error || "Failed to save draft", "error")
+        return result
       }
     } catch (error) {
       console.error("Save draft exception:", error)
       showMessage("Error saving draft", "error")
+      return { success: false, error: "Save draft exception" }
     } finally {
       setSaving(false)
     }
@@ -579,6 +643,7 @@ export default function BranchReportOfficerForms() {
         setCurrentFieldIndex(0)
         setFormData({})
         setEditingFormId(null)
+        setEditingForm(null)
         await loadForms(profile.id)
       } else {
         showMessage(result.error || "Failed to submit form", "error")
@@ -608,6 +673,19 @@ export default function BranchReportOfficerForms() {
       const value = formData[field.name] || ""
       return value.trim() !== ""
     })
+  }
+
+  // Function to extract and display the "sent back" reason from notes
+  const getSentBackReason = (notes: string | undefined): string | null => {
+    if (!notes) return null
+
+    const sentBackMatch = notes.match(/Sent back by Program Officer: (.+?)(?:\n|$)/i)
+    return sentBackMatch ? sentBackMatch[1].trim() : null
+  }
+
+  // Function to check if form was sent back
+  const isFormSentBack = (form: FormSubmission): boolean => {
+    return form.status === "draft" && form.notes && form.notes.includes("Sent back by Program Officer")
   }
 
   const renderField = () => {
@@ -892,29 +970,28 @@ export default function BranchReportOfficerForms() {
                         <CardTitle className="text-lg font-semibold text-gray-900 mb-1">
                           {form.group_name || form.title}
                         </CardTitle>
-                        <p className="text-sm text-gray-600">Location: {form.location}</p>
                       </div>
                       {getStatusBadge(form.status)}
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0">
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>{formatDate(form.updated_at)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Users className="h-4 w-4" />
-                          <span>{form.number_of_groups} groups</span>
-                        </div>
-                      </div>
+                      {/* Show sent back reason if applicable */}
+                      {isFormSentBack(form) && (
+                        <Alert className="border-orange-200 bg-orange-50">
+                          <AlertTriangle className="h-4 w-4 text-orange-600" />
+                          <AlertDescription className="text-orange-700">
+                            <div className="font-medium mb-1">Sent back by Program Officer:</div>
+                            <div className="text-sm">{getSentBackReason(form.notes)}</div>
+                          </AlertDescription>
+                        </Alert>
+                      )}
 
                       <div className="flex gap-2 pt-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="flex-1"
+                          className="flex-1 bg-transparent"
                           onClick={() => handleEditForm(form.id)}
                           disabled={
                             form.status === "submitted" || form.status === "reviewed" || form.status === "approved"
@@ -968,6 +1045,20 @@ export default function BranchReportOfficerForms() {
             </DialogTitle>
           </DialogHeader>
 
+          {/* Show sent back reason prominently at the top of the form */}
+          {editingForm && isFormSentBack(editingForm) && (
+            <Alert className="border-orange-200 bg-orange-50 mb-6">
+              <MessageSquare className="h-4 w-4 text-orange-600" />
+              <AlertDescription className="text-orange-700">
+                <div className="font-medium mb-2">This form was sent back by the Program Officer:</div>
+                <div className="bg-white p-3 rounded border text-sm">"{getSentBackReason(editingForm.notes)}"</div>
+                <div className="text-xs mt-2 text-orange-600">
+                  Please address the feedback above and resubmit the form.
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Progress Bar */}
           <div className="mb-6">
             <div className="flex justify-between text-sm text-muted-foreground mb-2">
@@ -1003,7 +1094,7 @@ export default function BranchReportOfficerForms() {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex gap-3 flex-1">
               {currentFieldIndex > 0 && (
-                <Button variant="outline" onClick={handleBack} className="flex-1">
+                <Button variant="outline" onClick={handleBack} className="flex-1 bg-transparent">
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   Back
                 </Button>

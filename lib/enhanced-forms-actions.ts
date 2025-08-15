@@ -315,25 +315,35 @@ export async function submitForm(userId: string, formData: any): Promise<FormAct
       result = data
     }
 
-    // Find Program Officer in the same branch to notify
-    const { data: programOfficers } = await supabaseAdmin
-      .from("profiles")
-      .select("id, full_name")
-      .eq("branch_id", profile.branch_id)
-      .eq("role", "program_officer")
-      .eq("status", "active")
+    // Try to find Program Officer in the same branch to notify (optional)
+    try {
+      const { data: programOfficers } = await supabaseAdmin
+        .from("profiles")
+        .select("id, full_name")
+        .eq("branch_id", profile.branch_id)
+        .eq("role", "program_officer")
+        .eq("status", "active")
 
-    // Create notifications for Program Officers
-    if (programOfficers && programOfficers.length > 0) {
-      for (const po of programOfficers) {
-        await createNotification(
-          po.id,
-          "New Form Submitted",
-          `A new form "${result.group_name || result.title}" has been submitted by ${profile.full_name} and requires your review.`,
-          "info",
-          result.id,
-        )
+      // Create notifications for Program Officers if they exist
+      if (programOfficers && programOfficers.length > 0) {
+        for (const po of programOfficers) {
+          try {
+            await createNotification(
+              po.id,
+              "New Form Submitted",
+              `A new form "${result.group_name || result.title}" has been submitted by ${profile.full_name} and requires your review.`,
+              "info",
+              result.id,
+            )
+          } catch (notificationError) {
+            console.warn("Failed to create notification for program officer:", po.id, notificationError)
+            // Continue without failing the form submission
+          }
+        }
       }
+    } catch (notificationError) {
+      console.warn("Failed to send notifications to program officers:", notificationError)
+      // Continue without failing the form submission
     }
 
     console.log("Form submitted successfully:", result.id)
@@ -643,14 +653,19 @@ export async function sendFormBack(
       return handleError(error, "Send form back")
     }
 
-    // Create notification for Branch Report Officer
-    await createNotification(
-      form.created_by,
-      "Form Sent Back for Revision",
-      `Your form "${form.group_name || form.title}" has been sent back by the Program Officer for revision. Reason: ${reason}`,
-      "warning",
-      formId,
-    )
+    // Try to create notification for Branch Report Officer
+    try {
+      await createNotification(
+        form.created_by,
+        "Form Sent Back for Revision",
+        `Your form "${form.group_name || form.title}" has been sent back by the Program Officer for revision. Reason: ${reason}`,
+        "warning",
+        formId,
+      )
+    } catch (notificationError) {
+      console.warn("Failed to create notification for form send back:", notificationError)
+      // Continue without failing the operation
+    }
 
     return { success: true, data }
   } catch (error) {
@@ -695,14 +710,19 @@ export async function updateFormByProgramOfficer(
       return handleError(error, "Update form by Program Officer")
     }
 
-    // Create notification for Branch Report Officer
-    await createNotification(
-      form.created_by,
-      "Form Updated by Program Officer",
-      `Your form "${form.group_name || form.title}" has been updated by the Program Officer. Please review the changes.`,
-      "info",
-      formId,
-    )
+    // Try to create notification for Branch Report Officer
+    try {
+      await createNotification(
+        form.created_by,
+        "Form Updated by Program Officer",
+        `Your form "${form.group_name || form.title}" has been updated by the Program Officer. Please review the changes.`,
+        "info",
+        formId,
+      )
+    } catch (notificationError) {
+      console.warn("Failed to create notification for form update:", notificationError)
+      // Continue without failing the operation
+    }
 
     return { success: true, data }
   } catch (error) {
@@ -739,14 +759,19 @@ export async function approveForm(formId: string, programOfficerId: string): Pro
       return handleError(error, "Approve form")
     }
 
-    // Create notification for Branch Report Officer
-    await createNotification(
-      form.created_by,
-      "Form Approved",
-      `Your form "${form.group_name || form.title}" has been approved by the Program Officer.`,
-      "success",
-      formId,
-    )
+    // Try to create notification for Branch Report Officer
+    try {
+      await createNotification(
+        form.created_by,
+        "Form Approved",
+        `Your form "${form.group_name || form.title}" has been approved by the Program Officer.`,
+        "success",
+        formId,
+      )
+    } catch (notificationError) {
+      console.warn("Failed to create notification for form approval:", notificationError)
+      // Continue without failing the operation
+    }
 
     return { success: true, data }
   } catch (error) {
@@ -763,6 +788,19 @@ async function createNotification(
   formId: string,
 ): Promise<void> {
   try {
+    // Check if notifications table exists first
+    const { data: tableExists } = await supabaseAdmin
+      .from("information_schema.tables")
+      .select("table_name")
+      .eq("table_schema", "public")
+      .eq("table_name", "notifications")
+      .single()
+
+    if (!tableExists) {
+      console.warn("Notifications table does not exist, skipping notification creation")
+      return
+    }
+
     const { error } = await supabaseAdmin.from("notifications").insert({
       user_id: userId,
       title: title,
@@ -774,8 +812,12 @@ async function createNotification(
 
     if (error) {
       console.error("Error creating notification:", error)
+      throw error
     }
+
+    console.log("Notification created successfully for user:", userId)
   } catch (error) {
-    console.error("Error creating notification:", error)
+    console.error("Error in createNotification function:", error)
+    throw error
   }
 }

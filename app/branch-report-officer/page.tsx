@@ -5,9 +5,27 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { FileText, CheckCircle, PieChart, LogOut, Menu, AlertCircle, BarChart3, RefreshCw } from "lucide-react"
+import { Progress } from "@/components/ui/progress"
+import { Badge } from "@/components/ui/badge"
+import {
+  FileText,
+  CheckCircle,
+  PieChart,
+  LogOut,
+  Menu,
+  AlertCircle,
+  BarChart3,
+  RefreshCw,
+  TrendingUp,
+  Target,
+  Award,
+  Calendar,
+  Send,
+  Edit,
+} from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 import { getUserProfileSimple } from "@/lib/admin-actions"
+import { getFormsByUser, type FormSubmission } from "@/lib/enhanced-forms-actions"
 
 interface UserProfile {
   id: string
@@ -22,8 +40,7 @@ interface UserProfile {
 interface DashboardMetrics {
   totalReports: number
   activeReports: number
-  dataPoints: number
-  reportStatus: string
+  draftForms: number
 }
 
 export default function BranchReportOfficerPage() {
@@ -33,17 +50,68 @@ export default function BranchReportOfficerPage() {
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [forms, setForms] = useState<FormSubmission[]>([])
+  const [showRecentForms, setShowRecentForms] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [metrics, setMetrics] = useState<DashboardMetrics>({
     totalReports: 0,
     activeReports: 0,
-    dataPoints: 0,
-    reportStatus: "Loading...",
+    draftForms: 0,
   })
   const router = useRouter()
 
   useEffect(() => {
     loadUserData()
   }, [router, retryCount])
+
+  const loadRealFormsData = async (userId: string) => {
+    try {
+      console.log("Loading forms data for user:", userId)
+      const result = await getFormsByUser(userId)
+
+      if (result.success && result.data) {
+        console.log("Forms loaded successfully:", result.data.length, "forms")
+        setForms(result.data)
+
+        // Calculate real metrics from actual forms data
+        const totalForms = result.data.length
+        const approvedForms = result.data.filter((form: FormSubmission) => form.status === "approved").length
+        const submittedForms = result.data.filter((form: FormSubmission) => form.status === "submitted").length
+        const reviewedForms = result.data.filter((form: FormSubmission) => form.status === "reviewed").length
+        const draftForms = result.data.filter((form: FormSubmission) => form.status === "draft").length
+
+        console.log("Metrics calculated:", {
+          total: totalForms,
+          approved: approvedForms,
+          submitted: submittedForms,
+          reviewed: reviewedForms,
+          draft: draftForms,
+        })
+
+        setMetrics({
+          totalReports: approvedForms + draftForms, // Sum of approved and draft forms only
+          activeReports: approvedForms,
+          draftForms: draftForms,
+        })
+      } else {
+        console.warn("Failed to load forms:", result.error)
+        setForms([])
+        setMetrics({
+          totalReports: 0, // This will be 0 + 0 when no forms exist
+          activeReports: 0,
+          draftForms: 0,
+        })
+      }
+    } catch (error) {
+      console.error("Error loading real forms data:", error)
+      setForms([])
+      setMetrics({
+        totalReports: 0, // This will be 0 + 0 when error occurs
+        activeReports: 0,
+        draftForms: 0,
+      })
+    }
+  }
 
   const loadUserData = async () => {
     try {
@@ -64,7 +132,6 @@ export default function BranchReportOfficerPage() {
       if (userError) {
         console.error("Auth error:", userError)
         if (userError.message?.includes("Invalid JWT")) {
-          // Clear invalid session and redirect
           await supabase.auth.signOut()
           router.push("/")
           return
@@ -88,7 +155,6 @@ export default function BranchReportOfficerPage() {
 
         if (profileResult.code === "RATE_LIMIT") {
           setError("Service is busy. Retrying automatically...")
-          // Auto-retry after delay for rate limits
           setTimeout(() => {
             setRetryCount((prev) => prev + 1)
           }, 3000)
@@ -114,7 +180,6 @@ export default function BranchReportOfficerPage() {
       const validRoles = ["branch_report_officer", "report_officer"]
       if (!validRoles.includes(userProfile.role)) {
         console.log("User role mismatch:", userProfile.role)
-        // Redirect based on actual role
         switch (userProfile.role) {
           case "admin":
             router.push("/admin")
@@ -131,26 +196,13 @@ export default function BranchReportOfficerPage() {
         return
       }
 
-      // Check account status
       if (userProfile.status !== "active") {
         setError("Your account is not active. Please contact administrator.")
         return
       }
 
       setProfile(userProfile)
-
-      // Load metrics if user has a branch
-      if (userProfile.branch_id) {
-        await loadMetrics(userProfile.branch_id)
-      } else {
-        console.warn("User has no branch assigned")
-        setMetrics({
-          totalReports: 0,
-          activeReports: 0,
-          dataPoints: 0,
-          reportStatus: "No Branch Assigned",
-        })
-      }
+      await loadRealFormsData(authUser.id)
     } catch (error: any) {
       console.error("Load user data error:", error)
 
@@ -163,52 +215,6 @@ export default function BranchReportOfficerPage() {
       }
     } finally {
       setLoading(false)
-    }
-  }
-
-  const loadMetrics = async (branchId: string) => {
-    try {
-      // Try to load from form_submissions table first
-      const { data: formsData, error: formsError } = await supabase
-        .from("form_submissions")
-        .select("id, status")
-        .eq("branch_id", branchId)
-
-      if (formsError && !formsError.message?.includes("does not exist")) {
-        console.warn("Form submissions query error:", formsError)
-      }
-
-      if (formsData) {
-        // Use form_submissions data
-        const totalForms = formsData.length
-        const draftForms = formsData.filter((f) => f.status === "draft").length
-        const submittedForms = formsData.filter((f) => f.status === "submitted").length
-        const activeForms = draftForms + submittedForms
-
-        setMetrics({
-          totalReports: totalForms,
-          activeReports: activeForms,
-          dataPoints: totalForms * 30,
-          reportStatus: totalForms > 0 ? "Active" : "No Forms",
-        })
-        return
-      }
-
-      // Fallback to basic metrics
-      setMetrics({
-        totalReports: 0,
-        activeReports: 0,
-        dataPoints: 0,
-        reportStatus: "Ready",
-      })
-    } catch (error) {
-      console.error("Error loading metrics:", error)
-      setMetrics({
-        totalReports: 0,
-        activeReports: 0,
-        dataPoints: 0,
-        reportStatus: "Ready",
-      })
     }
   }
 
@@ -229,6 +235,40 @@ export default function BranchReportOfficerPage() {
   const handleRetry = () => {
     setRetryCount((prev) => prev + 1)
   }
+
+  const handleRefreshData = async () => {
+    if (user && !refreshing) {
+      setRefreshing(true)
+      console.log("Refreshing dashboard data...")
+
+      try {
+        // Force reload forms data
+        await loadRealFormsData(user.id)
+        console.log("Dashboard data refreshed successfully")
+      } catch (error) {
+        console.error("Error refreshing data:", error)
+      } finally {
+        setRefreshing(false)
+      }
+    }
+  }
+
+  const toggleRecentForms = () => {
+    setShowRecentForms(!showRecentForms)
+  }
+
+  // Calculate performance metrics
+  const completionRate = metrics.totalReports > 0 ? Math.round((metrics.activeReports / metrics.totalReports) * 100) : 0
+  const submissionRate =
+    metrics.totalReports > 0
+      ? Math.round((forms.filter((f) => f.status !== "draft").length / metrics.totalReports) * 100)
+      : 0
+  const thisWeekForms = forms.filter((f) => {
+    const formDate = new Date(f.created_at)
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    return formDate >= weekAgo
+  }).length
 
   // Loading state
   if (loading) {
@@ -350,13 +390,104 @@ export default function BranchReportOfficerPage() {
                 Welcome, {profile?.full_name || "Officer"}!{profile?.branch_name && ` • ${profile.branch_name} Branch`}
               </p>
             </div>
+            <div className="flex items-center gap-4">
+              {/* Toggle Switch for Recent Forms */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-gray-700">Show Recent Forms</span>
+                <button
+                  onClick={toggleRecentForms}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                    showRecentForms ? "bg-blue-500" : "bg-gray-300"
+                  }`}
+                  role="switch"
+                  aria-checked={showRecentForms}
+                  aria-label="Toggle recent forms display"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      showRecentForms ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+              <Button onClick={handleRefreshData} variant="outline" size="sm" disabled={refreshing}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+                {refreshing ? "Refreshing..." : "Refresh Data"}
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Dashboard Content */}
         <div className="flex-1 overflow-auto bg-gray-50 px-6 py-6">
-          {/* Metrics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Performance Overview */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Performance Overview</h2>
+              {completionRate >= 80 && (
+                <Badge className="bg-green-100 text-green-800 border-green-200">
+                  <Award className="h-3 w-3 mr-1" />
+                  High Performer
+                </Badge>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-100 text-sm">Completion Rate</p>
+                      <p className="text-2xl font-bold">{completionRate}%</p>
+                    </div>
+                    <Target className="h-8 w-8 text-blue-200" />
+                  </div>
+                  <Progress value={completionRate} className="mt-2 bg-blue-400" />
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-green-100 text-sm">Submission Rate</p>
+                      <p className="text-2xl font-bold">{submissionRate}%</p>
+                    </div>
+                    <Send className="h-8 w-8 text-green-200" />
+                  </div>
+                  <Progress value={submissionRate} className="mt-2 bg-green-400" />
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-purple-100 text-sm">This Week</p>
+                      <p className="text-2xl font-bold">{thisWeekForms}</p>
+                    </div>
+                    <Calendar className="h-8 w-8 text-purple-200" />
+                  </div>
+                  <p className="text-purple-100 text-xs mt-2">Forms created</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-orange-100 text-sm">Streak</p>
+                      <p className="text-2xl font-bold">{Math.min(thisWeekForms, 7)}</p>
+                    </div>
+                    <TrendingUp className="h-8 w-8 text-orange-200" />
+                  </div>
+                  <p className="text-orange-100 text-xs mt-2">Days active</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Main Metrics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             {/* Total Forms Card */}
             <Card className="bg-white shadow-sm border-0">
               <CardContent className="p-6">
@@ -371,124 +502,102 @@ export default function BranchReportOfficerPage() {
               </CardContent>
             </Card>
 
-            {/* Active Forms Card */}
+            {/* Approved Forms Card */}
             <Card className="bg-white shadow-sm border-0">
               <CardContent className="p-6">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Active Forms</p>
+                    <p className="text-sm font-medium text-gray-600">Approved Forms</p>
                     <h2 className="text-4xl font-bold mt-1 text-gray-900">{metrics.activeReports}</h2>
-                    <p className="text-sm text-gray-500 mt-1">In progress</p>
+                    <p className="text-sm text-gray-500 mt-1">Successfully approved</p>
                   </div>
-                  <BarChart3 className="h-6 w-6 text-gray-400" />
+                  <CheckCircle className="h-6 w-6 text-green-500" />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Data Points Card */}
+            {/* Draft Forms Card */}
             <Card className="bg-white shadow-sm border-0">
               <CardContent className="p-6">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Data Points</p>
-                    <h2 className="text-4xl font-bold mt-1 text-gray-900">{metrics.dataPoints}</h2>
-                    <p className="text-sm text-gray-500 mt-1">Collected data</p>
+                    <p className="text-sm font-medium text-gray-600">Draft Forms</p>
+                    <h2 className="text-4xl font-bold mt-1 text-gray-900">{metrics.draftForms}</h2>
+                    <p className="text-sm text-gray-500 mt-1">Pending completion</p>
                   </div>
-                  <PieChart className="h-6 w-6 text-gray-400" />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Status Card */}
-            <Card className="bg-white shadow-sm border-0">
-              <CardContent className="p-6">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Status</p>
-                    <h2
-                      className="text-2xl font-bold mt-1"
-                      style={{
-                        color:
-                          metrics.reportStatus === "Active"
-                            ? "#10b981"
-                            : metrics.reportStatus.includes("Error")
-                              ? "#ef4444"
-                              : "#009edb",
-                      }}
-                    >
-                      {metrics.reportStatus}
-                    </h2>
-                    <p className="text-sm text-gray-500 mt-1">Current status</p>
-                  </div>
-                  <CheckCircle
-                    className="h-6 w-6"
-                    style={{
-                      color:
-                        metrics.reportStatus === "Active"
-                          ? "#10b981"
-                          : metrics.reportStatus.includes("Error")
-                            ? "#ef4444"
-                            : "#009edb",
-                    }}
-                  />
+                  <Edit className="h-6 w-6 text-yellow-500" />
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Quick Actions */}
-          <div className="mt-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Card className="bg-white shadow-sm border-0 hover:shadow-md transition-shadow cursor-pointer">
+          {/* Recent Forms Summary - Toggle */}
+          {showRecentForms && forms.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Forms</h3>
+              <Card className="bg-white shadow-sm border-0">
                 <CardContent className="p-6">
-                  <Link href="/branch-report-officer/forms" className="block">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 rounded-lg" style={{ backgroundColor: "#009edb" }}>
-                        <FileText className="h-5 w-5 text-white" />
+                  <div className="space-y-3">
+                    {forms.slice(0, 5).map((form) => (
+                      <div
+                        key={form.id}
+                        className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0"
+                      >
+                        <div>
+                          <h4 className="font-medium text-gray-900">{form.group_name || form.title}</h4>
+                          <p className="text-sm text-gray-500">{form.location}</p>
+                        </div>
+                        <div className="text-right">
+                          <span
+                            className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              form.status === "approved"
+                                ? "bg-green-100 text-green-800"
+                                : form.status === "submitted"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : form.status === "reviewed"
+                                    ? "bg-purple-100 text-purple-800"
+                                    : "bg-yellow-100 text-yellow-800"
+                            }`}
+                          >
+                            {form.status.charAt(0).toUpperCase() + form.status.slice(1)}
+                          </span>
+                          <p className="text-xs text-gray-500 mt-1">{new Date(form.updated_at).toLocaleDateString()}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">Manage Forms</h4>
-                        <p className="text-sm text-gray-500">Create and edit forms</p>
-                      </div>
+                    ))}
+                  </div>
+                  {forms.length > 5 && (
+                    <div className="mt-4 text-center">
+                      <Link href="/branch-report-officer/forms">
+                        <Button variant="outline" size="sm">
+                          View All Forms ({forms.length})
+                        </Button>
+                      </Link>
                     </div>
-                  </Link>
+                  )}
                 </CardContent>
               </Card>
+            </div>
+          )}
 
-              <Card className="bg-white shadow-sm border-0 hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-6">
-                  <Link href="/branch-report-officer/forms?filter=draft" className="block">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 rounded-lg bg-yellow-500">
-                        <FileText className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">Draft Forms</h4>
-                        <p className="text-sm text-gray-500">Continue editing drafts</p>
-                      </div>
-                    </div>
-                  </Link>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white shadow-sm border-0 hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-6">
-                  <Link href="/branch-report-officer/forms?filter=submitted" className="block">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 rounded-lg bg-green-500">
-                        <CheckCircle className="h-5 w-5 text-white" />
-                      </div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">Submitted Forms</h4>
-                        <p className="text-sm text-gray-500">View submitted forms</p>
-                      </div>
-                    </div>
+          {/* Empty state when no forms and recent forms is toggled on */}
+          {showRecentForms && forms.length === 0 && (
+            <div className="mb-6">
+              <Card className="bg-white shadow-sm border-0">
+                <CardContent className="p-6 text-center">
+                  <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Forms Yet</h3>
+                  <p className="text-gray-500 mb-4">You haven't created any forms yet.</p>
+                  <Link href="/branch-report-officer/forms">
+                    <Button style={{ backgroundColor: "#009edb", color: "white" }}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Create Your First Form
+                    </Button>
                   </Link>
                 </CardContent>
               </Card>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
