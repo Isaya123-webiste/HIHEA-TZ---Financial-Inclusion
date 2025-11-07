@@ -23,8 +23,6 @@ import {
 } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 import { getUserProfile } from "@/lib/auth"
-import { AIChatbot } from "@/components/ai-chatbot"
-import { AIReportGenerator } from "@/components/ai-report-generator"
 
 export default function BranchManagerDashboard() {
   const [user, setUser] = useState<any>(null)
@@ -352,12 +350,6 @@ export default function BranchManagerDashboard() {
                 </div>
               </CardContent>
             </Card>
-          </div>
-
-          {/* AI Features */}
-          <div className="grid gap-6 lg:grid-cols-2">
-            <AIChatbot userId={user?.id} />
-            <AIReportGenerator userId={user?.id} />
           </div>
         </div>
       </div>

@@ -12,7 +12,6 @@ import {
   BookOpen,
   Calendar,
   FileText,
-  MessageCircle,
   UserPlus,
   CheckCircle,
   Clock,
@@ -21,12 +20,10 @@ import {
 } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 import { getUserProfile } from "@/lib/admin-actions"
-import AiChatbot from "@/components/ai-chatbot"
 
 export default function ProgramOfficerDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [showAiChat, setShowAiChat] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const router = useRouter()
@@ -127,15 +124,6 @@ export default function ProgramOfficerDashboard() {
             </div>
             <div className="flex items-center gap-4">
               <Badge className="bg-green-100 text-green-800">Program Officer</Badge>
-              <Button
-                onClick={() => setShowAiChat(!showAiChat)}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                <MessageCircle className="h-4 w-4" />
-                AI Assistant
-              </Button>
               <Button variant="outline" size="sm" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4" />
                 Sign out
@@ -290,37 +278,25 @@ export default function ProgramOfficerDashboard() {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* AI Chatbot */}
-            {showAiChat && (
-              <AiChatbot
-                userContext={{
-                  userId: currentUser?.id,
-                  userRole: "program_officer",
-                  branchName: "Your Branch",
-                  recentActivity: ["Conducted training session", "Met with 5 members", "Updated member progress"],
-                }}
-              />
-            )}
-
             {/* Quick Actions */}
             <Card>
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start bg-transparent">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Add New Member
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start bg-transparent">
                   <BookOpen className="h-4 w-4 mr-2" />
                   Schedule Training
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start bg-transparent">
                   <FileText className="h-4 w-4 mr-2" />
                   Submit Report
                 </Button>
-                <Button variant="outline" className="w-full justify-start">
+                <Button variant="outline" className="w-full justify-start bg-transparent">
                   <Calendar className="h-4 w-4 mr-2" />
                   View Calendar
                 </Button>

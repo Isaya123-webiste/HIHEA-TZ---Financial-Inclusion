@@ -1,483 +1,354 @@
 "use server"
 
 import { supabaseAdmin } from "@/lib/supabase-admin"
-import { checkAdminRole } from "./admin-actions"
+import { revalidatePath } from "next/cache"
 
-// Helper function to generate secure password
-function generateSecurePassword(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*"
-  let password = ""
-  for (let i = 0; i < 12; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return password
+export interface UserProfile {
+  id: string
+  email: string
+  full_name: string
+  role: "admin" | "branch_manager" | "program_officer" | "assistance_program_officer" | "branch_report_officer"
+  branch_id: string | null
+  status: "active" | "inactive" | "pending"
+  created_at: string
+  updated_at: string
+  phone?: string | null
+  branches?: {
+    id: string
+    name: string
+  } | null
+  branch_name?: string
 }
 
-// Get all users with passwords (corrected function name)
-export async function getAllUsersWithPasswords(adminId: string) {
-  try {
-    // Verify admin role
-    const adminCheck = await checkAdminRole(adminId)
-    if (adminCheck.error || !adminCheck.isAdmin) {
-      return { error: "Unauthorized: Admin access required" }
-    }
+export interface CreateUserData {
+  email: string
+  full_name: string
+  role: UserProfile["role"]
+  branch_id?: string
+  phone?: string
+  password: string
+}
 
-    const { data: profiles, error } = await supabaseAdmin
+export interface UpdateUserData {
+  full_name?: string
+  email?: string
+  role?: UserProfile["role"]
+  branch_id?: string | null
+  status?: UserProfile["status"]
+  phone?: string | null
+}
+
+export async function getAllUsers() {
+  try {
+    console.log("Fetching all users...")
+
+    const { data, error } = await supabaseAdmin
       .from("profiles")
       .select(`
         id,
-        full_name,
         email,
+        full_name,
         role,
         branch_id,
-        phone,
         status,
-        temp_password,
         created_at,
         updated_at,
-        branches!profiles_branch_id_fkey (
+        phone,
+        branches (
           id,
           name
         )
       `)
-      .neq("role", "admin")
       .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("Get users error:", error)
-      return { error: "Failed to fetch users" }
+      console.error("Error fetching users:", error)
+      return { success: false, error: "Failed to fetch users" }
     }
 
-    // Transform the data to include branch_name and password
-    const users =
-      profiles?.map((profile) => ({
-        ...profile,
-        branch_name: profile.branches?.name || "No Branch",
-        password: profile.temp_password || "Not Available",
+    // Transform data to include branch_name for easier display
+    const transformedData =
+      data?.map((user) => ({
+        ...user,
+        branch_name: user.branches?.name || null,
       })) || []
 
-    return { users }
+    console.log("Successfully fetched users:", transformedData.length)
+    return { success: true, data: transformedData }
   } catch (error) {
-    console.error("Get all users with passwords error:", error)
-    return { error: "Failed to fetch users" }
+    console.error("Unexpected error in getAllUsers:", error)
+    return { success: false, error: "An unexpected error occurred while fetching users" }
   }
 }
 
-// Create user with direct password (no email invitation)
-export async function createUserWithPassword(
-  adminId: string,
-  userData: {
-    full_name: string
-    email: string
-    role: string
-    branch_id: string
-    phone?: string
-    password: string
-  },
-) {
+export async function createUser(userData: CreateUserData) {
   try {
-    // Verify admin permissions
-    const adminCheck = await checkAdminRole(adminId)
-    if (adminCheck.error || !adminCheck.isAdmin) {
-      return { error: "Access denied. Admin privileges required." }
-    }
+    console.log("Creating user with data:", { ...userData, password: "[REDACTED]" })
 
-    // Check if user already exists
-    const { data: existingUser, error: checkError } = await supabaseAdmin
-      .from("profiles")
-      .select("id, email, branch_id, branches(name)")
-      .eq("email", userData.email)
-      .single()
-
-    if (existingUser) {
-      const branchName = existingUser.branches?.name || "Unknown Branch"
-      return { error: `User with email ${userData.email} already exists in ${branchName}` }
-    }
-
-    // Create user in auth with password
+    // First, create the auth user
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: userData.email,
       password: userData.password,
-      email_confirm: true, // Auto-confirm for direct activation
-      user_metadata: {
-        full_name: userData.full_name,
-        role: userData.role,
-        branch_id: userData.branch_id,
-      },
+      email_confirm: true,
     })
 
     if (authError) {
-      console.error("Auth user creation error:", authError)
-      return { error: "Failed to create user account" }
+      console.error("Error creating auth user:", authError)
+      return { success: false, error: `Failed to create user account: ${authError.message}` }
     }
 
-    // Create profile
-    const { error: profileError } = await supabaseAdmin.from("profiles").insert({
+    if (!authUser.user) {
+      return { success: false, error: "Failed to create user account" }
+    }
+
+    console.log("Auth user created:", authUser.user.id)
+
+    // Then create the profile
+    const profileData = {
       id: authUser.user.id,
-      full_name: userData.full_name,
       email: userData.email,
+      full_name: userData.full_name,
       role: userData.role,
-      branch_id: userData.branch_id,
+      branch_id: userData.branch_id || null,
       phone: userData.phone || null,
-      status: "active", // Directly activated
-      temp_password: userData.password, // Store password for admin reference
-      invitation_sent: false,
-      invitation_status: "completed",
-    })
-
-    if (profileError) {
-      console.error("Profile creation error:", profileError)
-      // Clean up auth user if profile creation fails
-      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id)
-      return { error: "Failed to create user profile" }
+      status: "active" as const,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     }
 
-    return {
-      success: true,
-      userId: authUser.user.id,
-      message: "User created and activated successfully",
-    }
-  } catch (error) {
-    console.error("Create user with password error:", error)
-    return { error: "Failed to create user" }
-  }
-}
-
-// Bulk import users with passwords
-export async function bulkImportUsersWithPasswordSupport(adminId: string, csvContent: string, branchId: string) {
-  try {
-    // Verify admin permissions
-    const adminCheck = await checkAdminRole(adminId)
-    if (adminCheck.error || !adminCheck.isAdmin) {
-      return { error: "Access denied. Admin privileges required." }
-    }
-
-    // Get branch information
-    const { data: branch, error: branchError } = await supabaseAdmin
-      .from("branches")
-      .select("name")
-      .eq("id", branchId)
-      .single()
-
-    if (branchError || !branch) {
-      return { error: "Branch not found" }
-    }
-
-    // Parse CSV
-    const lines = csvContent.split("\n").filter((line) => line.trim())
-    if (lines.length === 0) {
-      return { error: "CSV file is empty" }
-    }
-
-    const headers = lines[0].split(",").map((h) => h.trim().toLowerCase())
-
-    // Validate headers
-    const requiredHeaders = ["full_name", "email", "role"]
-    const missingHeaders = requiredHeaders.filter((header) => !headers.includes(header))
-    if (missingHeaders.length > 0) {
-      return { error: `Missing required headers: ${missingHeaders.join(", ")}` }
-    }
-
-    // Check if password column exists
-    const hasPasswordColumn = headers.includes("password")
-
-    // Parse users
-    const users = lines
-      .slice(1)
-      .map((line) => {
-        const values = line.split(",").map((v) => v.trim())
-        const user: any = {}
-        headers.forEach((header, index) => {
-          user[header] = values[index] || ""
-        })
-        return user
-      })
-      .filter((user) => user.email && user.full_name && user.role) // Filter out empty rows
-
-    // Process results
-    const results = {
-      successful: [] as any[],
-      failed: [] as any[],
-      duplicates: [] as any[],
-      crossBranchConflicts: [] as any[],
-      passwordsGenerated: [] as any[],
-    }
-
-    // Check for existing users
-    const emails = users.map((u) => u.email)
-    const { data: existingUsers } = await supabaseAdmin
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
-      .select("email, branch_id, branches(name)")
-      .in("email", emails)
-
-    const existingEmailMap = new Map()
-    existingUsers?.forEach((user) => {
-      existingEmailMap.set(user.email, {
-        branch_id: user.branch_id,
-        branch_name: user.branches?.name,
-      })
-    })
-
-    // Process each user
-    for (const user of users) {
-      try {
-        // Check for duplicates
-        if (existingEmailMap.has(user.email)) {
-          const existing = existingEmailMap.get(user.email)
-          if (existing.branch_id === branchId) {
-            results.duplicates.push({
-              email: user.email,
-              full_name: user.full_name,
-              existing_branch: existing.branch_name,
-            })
-          } else {
-            results.crossBranchConflicts.push({
-              email: user.email,
-              full_name: user.full_name,
-              existing_branch: existing.branch_name,
-            })
-          }
-          continue
-        }
-
-        // Generate password if not provided
-        if (!user.password) {
-          user.password = generateSecurePassword()
-          results.passwordsGenerated.push({
-            email: user.email,
-            full_name: user.full_name,
-            password: user.password,
-          })
-        }
-
-        // Create user with password
-        const createResult = await createUserWithPassword(adminId, {
-          full_name: user.full_name,
-          email: user.email,
-          role: user.role,
-          branch_id: branchId,
-          phone: user.phone || "",
-          password: user.password,
-        })
-
-        if (createResult.success) {
-          results.successful.push({
-            email: user.email,
-            full_name: user.full_name,
-            password: user.password,
-          })
-        } else {
-          results.failed.push({
-            email: user.email,
-            full_name: user.full_name,
-            error: createResult.error,
-          })
-        }
-      } catch (error) {
-        console.error(`Error processing user ${user.email}:`, error)
-        results.failed.push({
-          email: user.email,
-          full_name: user.full_name,
-          error: "Unexpected error",
-        })
-      }
-    }
-
-    return {
-      success: true,
-      results,
-      hasPasswordColumn,
-    }
-  } catch (error) {
-    console.error("Bulk import error:", error)
-    return { error: "Failed to import users", details: error }
-  }
-}
-
-// Update user password
-export async function updateUserPassword(adminId: string, userId: string, newPassword: string) {
-  try {
-    // Verify admin permissions
-    const adminCheck = await checkAdminRole(adminId)
-    if (adminCheck.error || !adminCheck.isAdmin) {
-      return { error: "Access denied. Admin privileges required." }
-    }
-
-    // Update password in auth
-    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-      password: newPassword,
-    })
-
-    if (authError) {
-      return { error: authError.message }
-    }
-
-    // Update temp_password in profile
-    const { error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .update({
-        temp_password: newPassword,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", userId)
-
-    if (profileError) {
-      return { error: profileError.message }
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error("Update password error:", error)
-    return { error: "Failed to update password" }
-  }
-}
-
-// Export users with passwords
-export async function exportUsersByBranchAndRole(
-  adminId: string,
-  filters: {
-    selectedBranches?: string[]
-    selectedRoles?: string[]
-    includeAllBranches?: boolean
-    includeAllRoles?: boolean
-  },
-) {
-  try {
-    // Verify admin permissions
-    const adminCheck = await checkAdminRole(adminId)
-    if (adminCheck.error || !adminCheck.isAdmin) {
-      return { error: "Access denied. Admin privileges required." }
-    }
-
-    let query = supabaseAdmin
-      .from("profiles")
+      .insert(profileData)
       .select(`
-        full_name,
-        email,
-        role,
-        phone,
-        temp_password,
-        branches!profiles_branch_id_fkey (
+        *,
+        branches (
+          id,
           name
         )
       `)
-      .neq("role", "admin")
+      .single()
 
-    // Apply branch filter
-    if (!filters.includeAllBranches && filters.selectedBranches && filters.selectedBranches.length > 0) {
-      query = query.in("branch_id", filters.selectedBranches)
+    if (profileError) {
+      console.error("Error creating profile:", profileError)
+
+      // Clean up auth user if profile creation fails
+      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id)
+
+      return { success: false, error: `Failed to create user profile: ${profileError.message}` }
     }
 
-    // Apply role filter
-    if (!filters.includeAllRoles && filters.selectedRoles && filters.selectedRoles.length > 0) {
-      query = query.in("role", filters.selectedRoles)
-    }
+    console.log("User created successfully:", profile)
 
-    const { data: profiles, error } = await query.order("full_name", { ascending: true })
-
-    if (error) {
-      return { error: error.message }
-    }
-
-    // Transform data for CSV export
-    const exportData = profiles?.map((profile) => ({
-      full_name: profile.full_name,
-      email: profile.email,
-      role: profile.role,
-      branch_name: profile.branches?.name || "No Branch",
-      phone: profile.phone || "",
-      password: profile.temp_password || "Not Available",
-    }))
-
-    // Generate CSV content
-    const headers = ["Full Name", "Email", "Role", "Branch", "Phone", "Password"]
-    const csvRows = [
-      headers.join(","),
-      ...exportData.map((user) =>
-        [
-          `"${user.full_name}"`,
-          `"${user.email}"`,
-          `"${user.role}"`,
-          `"${user.branch_name}"`,
-          `"${user.phone}"`,
-          `"${user.password}"`,
-        ].join(","),
-      ),
-    ]
-
-    const csvContent = csvRows.join("\n")
-    const timestamp = new Date().toISOString().split("T")[0]
-    const filename = `users-export-${timestamp}.csv`
+    // Revalidate the users page
+    revalidatePath("/admin/users")
 
     return {
       success: true,
-      csvContent,
-      filename,
-      exportedCount: exportData.length,
+      data: {
+        ...profile,
+        branch_name: profile.branches?.name || null,
+      },
     }
   } catch (error) {
-    console.error("Export users error:", error)
-    return { error: "Failed to export users" }
+    console.error("Unexpected error in createUser:", error)
+    return { success: false, error: "An unexpected error occurred while creating the user" }
   }
 }
 
-// Delete user - FIXED VERSION
-export async function deleteUser(adminId: string, userId: string) {
+export async function updateUser(userId: string, userData: UpdateUserData) {
   try {
-    // Verify admin permissions
-    const adminCheck = await checkAdminRole(adminId)
-    if (adminCheck.error || !adminCheck.isAdmin) {
-      return { error: "Access denied. Admin privileges required." }
+    console.log("Updating user:", userId, "with data:", userData)
+
+    // Prepare update data
+    const updateData = {
+      ...userData,
+      updated_at: new Date().toISOString(),
     }
 
-    console.log(`Attempting to delete user with ID: ${userId}`)
-
-    // First, check if the user exists in profiles
-    const { data: profile, error: profileCheckError } = await supabaseAdmin
+    // Update the profile
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("profiles")
-      .select("id, email, full_name")
+      .update(updateData)
       .eq("id", userId)
+      .select(`
+        *,
+        branches (
+          id,
+          name
+        )
+      `)
       .single()
 
-    if (profileCheckError || !profile) {
-      console.error("Profile not found:", profileCheckError)
-      return { error: "User profile not found" }
+    if (profileError) {
+      console.error("Error updating profile:", profileError)
+      return { success: false, error: `Failed to update user: ${profileError.message}` }
     }
 
-    console.log(`Found profile for user: ${profile.email}`)
-
-    // Delete the profile first (this will work even if auth user doesn't exist)
-    const { error: profileDeleteError } = await supabaseAdmin.from("profiles").delete().eq("id", userId)
-
-    if (profileDeleteError) {
-      console.error("Profile deletion error:", profileDeleteError)
-      return { error: "Failed to delete user profile" }
-    }
-
-    console.log("Profile deleted successfully")
-
-    // Try to delete from auth, but don't fail if user doesn't exist in auth
-    try {
-      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+    // If email is being updated, also update the auth user
+    if (userData.email) {
+      const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        email: userData.email,
+      })
 
       if (authError) {
-        console.warn("Auth user deletion warning:", authError.message)
-        // Don't return error here - profile is already deleted
-        // This handles cases where user exists in profiles but not in auth
-      } else {
-        console.log("Auth user deleted successfully")
+        console.error("Error updating auth user email:", authError)
+        // Don't fail the whole operation, just log the error
       }
-    } catch (authDeleteError) {
-      console.warn("Auth user deletion failed (user may not exist in auth):", authDeleteError)
-      // Don't return error - profile deletion was successful
     }
+
+    console.log("User updated successfully:", profile)
+
+    // Revalidate the users page
+    revalidatePath("/admin/users")
 
     return {
       success: true,
-      message: `User "${profile.full_name}" deleted successfully`,
+      data: {
+        ...profile,
+        branch_name: profile.branches?.name || null,
+      },
     }
   } catch (error) {
-    console.error("Delete user error:", error)
-    return { error: "Failed to delete user" }
+    console.error("Unexpected error in updateUser:", error)
+    return { success: false, error: "An unexpected error occurred while updating the user" }
+  }
+}
+
+export async function deleteUser(userId: string) {
+  try {
+    console.log("Deleting user:", userId)
+
+    // First delete the profile
+    const { error: profileError } = await supabaseAdmin.from("profiles").delete().eq("id", userId)
+
+    if (profileError) {
+      console.error("Error deleting profile:", profileError)
+      return { success: false, error: `Failed to delete user profile: ${profileError.message}` }
+    }
+
+    // Then delete the auth user
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+
+    if (authError) {
+      console.error("Error deleting auth user:", authError)
+      // Don't fail if auth deletion fails, profile is already deleted
+    }
+
+    console.log("User deleted successfully")
+
+    // Revalidate the users page
+    revalidatePath("/admin/users")
+
+    return { success: true }
+  } catch (error) {
+    console.error("Unexpected error in deleteUser:", error)
+    return { success: false, error: "An unexpected error occurred while deleting the user" }
+  }
+}
+
+export async function changeUserPassword(userId: string, newPassword: string) {
+  try {
+    console.log("Changing password for user:", userId)
+
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      password: newPassword,
+    })
+
+    if (error) {
+      console.error("Error changing password:", error)
+      return { success: false, error: `Failed to change password: ${error.message}` }
+    }
+
+    console.log("Password changed successfully")
+    return { success: true }
+  } catch (error) {
+    console.error("Unexpected error in changeUserPassword:", error)
+    return { success: false, error: "An unexpected error occurred while changing the password" }
+  }
+}
+
+export async function searchUsers(searchTerm: string) {
+  try {
+    console.log("Searching users with term:", searchTerm)
+
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .select(`
+        id,
+        email,
+        full_name,
+        role,
+        branch_id,
+        status,
+        created_at,
+        updated_at,
+        phone,
+        branches (
+          id,
+          name
+        )
+      `)
+      .or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("Error searching users:", error)
+      return { success: false, error: "Failed to search users" }
+    }
+
+    // Transform data to include branch_name for easier display
+    const transformedData =
+      data?.map((user) => ({
+        ...user,
+        branch_name: user.branches?.name || null,
+      })) || []
+
+    console.log("Search results:", transformedData.length)
+    return { success: true, data: transformedData }
+  } catch (error) {
+    console.error("Unexpected error in searchUsers:", error)
+    return { success: false, error: "An unexpected error occurred while searching users" }
+  }
+}
+
+export async function getUserById(userId: string) {
+  try {
+    console.log("Fetching user by ID:", userId)
+
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .select(`
+        id,
+        email,
+        full_name,
+        role,
+        branch_id,
+        status,
+        created_at,
+        updated_at,
+        phone,
+        branches (
+          id,
+          name
+        )
+      `)
+      .eq("id", userId)
+      .single()
+
+    if (error) {
+      console.error("Error fetching user:", error)
+      return { success: false, error: "Failed to fetch user" }
+    }
+
+    const transformedData = {
+      ...data,
+      branch_name: data.branches?.name || null,
+    }
+
+    console.log("User fetched successfully")
+    return { success: true, data: transformedData }
+  } catch (error) {
+    console.error("Unexpected error in getUserById:", error)
+    return { success: false, error: "An unexpected error occurred while fetching the user" }
   }
 }

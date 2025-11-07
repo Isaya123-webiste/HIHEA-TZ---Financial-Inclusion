@@ -271,26 +271,33 @@ export default function BranchReportOfficerForms() {
       id: "trust_erosion",
       name: "trust_erosion",
       label: "Trust erosion in MFIs",
-      type: "select",
+      type: "number",
       required: false,
-      options: ["None", "Low", "Medium", "High"],
+      placeholder: "0",
     },
     {
       id: "documentation_delay",
       name: "documentation_delay",
       label: "Documentation delay",
-      type: "select",
+      type: "number",
       required: false,
-      options: ["None", "Minor", "Moderate", "Severe"],
+      placeholder: "0",
     },
     {
-      id: "loan_cost_barriers",
-      name: "loan_cost_barriers",
-      label:
-        "Loan cost-high? Ask members. Explain barriers for no loans/ no bank account/not approved by bank, no insurance etc.",
+      id: "loan_cost_high",
+      name: "loan_cost_high",
+      label: "Loan cost-high? Ask members.",
       type: "textarea",
       required: false,
-      placeholder: "Explain if loan costs are high and describe barriers preventing access to financial services",
+      placeholder: "Ask members if loan costs are high",
+    },
+    {
+      id: "explain_barriers",
+      name: "explain_barriers",
+      label: "Explain barriers for no loans/ no bank account/not approved by bank, no insurance etc.",
+      type: "textarea",
+      required: false,
+      placeholder: "Explain barriers preventing access to financial services",
     },
     {
       id: "number_of_groups",
@@ -1112,7 +1119,21 @@ export default function BranchReportOfficerForms() {
                 </Button>
               ) : (
                 <div className="flex gap-2 flex-1">
-                  <Button variant="outline" onClick={() => handleSaveDraft()} disabled={saving} className="flex-1">
+                  <Button
+                    variant="outline"
+                    onClick={async () => {
+                      const result = await handleSaveDraft(true)
+                      if (result && result.success) {
+                        setIsFormOpen(false)
+                        setCurrentFieldIndex(0)
+                        setFormData({})
+                        setEditingFormId(null)
+                        setEditingForm(null)
+                      }
+                    }}
+                    disabled={saving}
+                    className="flex-1"
+                  >
                     <Save className="mr-2 h-4 w-4" />
                     {saving ? "Saving..." : "Save Draft"}
                   </Button>

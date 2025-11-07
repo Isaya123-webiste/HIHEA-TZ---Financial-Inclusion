@@ -1,21 +1,7 @@
 "use server"
 
-import { createClient } from "@supabase/supabase-js"
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-// Server-side Supabase client with service role key for admin operations
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
-  },
-})
-
-// Regular client for auth operations
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+import { createClient } from "@/lib/supabase/server"
+import { supabaseAdmin } from "@/lib/supabase/admin"
 
 export async function signUp(formData: FormData) {
   const email = formData.get("email") as string
@@ -37,6 +23,8 @@ export async function signUp(formData: FormData) {
   }
 
   try {
+    const supabase = await createClient()
+
     // Sign up the user using Supabase Auth API
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -45,6 +33,8 @@ export async function signUp(formData: FormData) {
         data: {
           full_name: fullName,
         },
+        emailRedirectTo:
+          process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
       },
     })
 
@@ -62,7 +52,6 @@ export async function signUp(formData: FormData) {
 
       if (profileError) {
         console.error("Profile creation error:", profileError)
-        // Don't return error here as user is already created
       }
     }
 
@@ -82,75 +71,111 @@ export async function signIn(formData: FormData) {
   const email = formData.get("email") as string
   const password = formData.get("password") as string
 
+  console.log("[v0] Sign in attempt for:", email)
+
   if (!email || !password) {
     return { error: "Email and password are required" }
   }
 
   try {
-    // Sign in using Supabase Auth API
+    const supabase = await createClient()
+
+    console.log("[v0] Calling Supabase signInWithPassword...")
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
 
     if (error) {
+      console.log("[v0] Supabase auth error:", error.message)
       return { error: error.message }
     }
 
+    console.log("[v0] Auth successful, user ID:", data.user?.id)
+
     if (data.user) {
-      // Get user profile to determine role-based redirect
-      const { data: profile, error: profileError } = await supabaseAdmin
-        .from("profiles")
-        .select("role, status")
-        .eq("id", data.user.id)
-        .single()
+      console.log("[v0] Fetching user profile...")
 
-      if (profileError || !profile) {
-        return { error: "User profile not found. Please contact administrator." }
-      }
+      try {
+        // Get user profile to determine role-based redirect
+        const { data: profile, error: profileError } = await supabaseAdmin
+          .from("profiles")
+          .select("role, status")
+          .eq("id", data.user.id)
+          .single()
 
-      // Check if user account is active
-      if (profile.status !== "active") {
+        console.log("[v0] Profile query result:", { profile, error: profileError })
+
+        if (profileError) {
+          console.error("[v0] Profile fetch error:", profileError)
+          await supabase.auth.signOut()
+          return { error: `Profile error: ${profileError.message || "Could not fetch user profile"}` }
+        }
+
+        if (!profile) {
+          console.error("[v0] No profile found for user")
+          await supabase.auth.signOut()
+          return { error: "User profile not found. Please contact administrator." }
+        }
+
+        console.log("[v0] Profile found - Role:", profile.role, "Status:", profile.status)
+
+        // Check if user account is active
+        if (profile.status !== "active") {
+          console.log("[v0] User account is not active")
+          await supabase.auth.signOut()
+          return { error: "Your account is not active. Please contact administrator." }
+        }
+
+        // Return redirect URL based on role
+        let redirectUrl = "/program-officer" // Default
+
+        switch (profile.role) {
+          case "admin":
+            redirectUrl = "/admin"
+            break
+          case "branch_manager":
+            redirectUrl = "/branch-manager"
+            break
+          case "program_officer":
+            redirectUrl = "/program-officer"
+            break
+          case "assistance_program_officer":
+            redirectUrl = "/assistance-program-officer"
+            break
+          case "branch_report_officer":
+            redirectUrl = "/branch-report-officer"
+            break
+          case "report_officer":
+            redirectUrl = "/branch-report-officer"
+            break
+          default:
+            console.error("[v0] Invalid role:", profile.role)
+            await supabase.auth.signOut()
+            return { error: "Invalid user role. Please contact administrator." }
+        }
+
+        console.log("[v0] Login successful, redirecting to:", redirectUrl)
+        return { success: true, redirectUrl }
+      } catch (profileFetchError: any) {
+        console.error("[v0] Unexpected error fetching profile:", profileFetchError)
         await supabase.auth.signOut()
-        return { error: "Your account is not active. Please contact administrator." }
+        return {
+          error: `Failed to load user profile: ${profileFetchError.message || "Unknown error"}. Please try again.`,
+        }
       }
-
-      // Return redirect URL based on role instead of using redirect()
-      let redirectUrl = "/program-officer" // Default
-
-      switch (profile.role) {
-        case "admin":
-          redirectUrl = "/admin"
-          break
-        case "branch_manager":
-          redirectUrl = "/branch-manager"
-          break
-        case "program_officer":
-          redirectUrl = "/program-officer"
-          break
-        case "branch_report_officer":
-          redirectUrl = "/branch-report-officer"
-          break
-        // Legacy support for old role name
-        case "report_officer":
-          redirectUrl = "/branch-report-officer"
-          break
-        default:
-          return { error: "Invalid user role. Please contact administrator." }
-      }
-
-      return { success: true, redirectUrl }
     }
 
     return { success: true }
-  } catch (error) {
-    console.error("Sign in error:", error)
-    return { error: "An unexpected error occurred during sign in" }
+  } catch (error: any) {
+    console.error("[v0] Sign in error:", error)
+    return { error: `An unexpected error occurred: ${error.message || "Please try again"}` }
   }
 }
 
 export async function signOut() {
   try {
+    const supabase = await createClient()
     const { error } = await supabase.auth.signOut()
     if (error) {
       return { error: error.message }
@@ -164,6 +189,7 @@ export async function signOut() {
 
 export async function getCurrentUser() {
   try {
+    const supabase = await createClient()
     const {
       data: { user },
       error,
@@ -233,9 +259,9 @@ export async function updateUserProfile(userId: string, updates: { full_name?: s
   }
 }
 
-// Helper function to check user role and redirect if necessary
 export async function checkUserRoleAndRedirect(requiredRole: string) {
   try {
+    const supabase = await createClient()
     const {
       data: { user },
       error,
@@ -259,12 +285,10 @@ export async function checkUserRoleAndRedirect(requiredRole: string) {
       return { error: "Account not active", redirectUrl: "/" }
     }
 
-    // Handle both old and new role names
     const normalizedRole = profile.role === "report_officer" ? "branch_report_officer" : profile.role
     const normalizedRequiredRole = requiredRole === "report_officer" ? "branch_report_officer" : requiredRole
 
     if (normalizedRole !== normalizedRequiredRole) {
-      // Return redirect URL based on actual role instead of using redirect()
       let redirectUrl = "/"
 
       switch (normalizedRole) {
@@ -276,6 +300,9 @@ export async function checkUserRoleAndRedirect(requiredRole: string) {
           break
         case "program_officer":
           redirectUrl = "/program-officer"
+          break
+        case "assistance_program_officer":
+          redirectUrl = "/assistance-program-officer"
           break
         case "branch_report_officer":
           redirectUrl = "/branch-report-officer"

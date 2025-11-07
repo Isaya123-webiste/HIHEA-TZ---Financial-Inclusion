@@ -19,21 +19,27 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
 const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey)
 
 export async function signInAndRedirect(formData: FormData) {
+  console.log("[v0] signInAndRedirect called")
+
   try {
     const result = await signIn(formData)
 
+    console.log("[v0] signIn result:", result)
+
     if (result.error) {
+      console.log("[v0] Sign in failed:", result.error)
       return { error: result.error }
     }
 
     if (result.success && result.redirectUrl) {
+      console.log("[v0] Sign in successful, redirect URL:", result.redirectUrl)
       return { success: true, redirectUrl: result.redirectUrl }
     }
 
     return { success: true }
-  } catch (error) {
-    console.error("Sign in and redirect error:", error)
-    return { error: "An unexpected error occurred during sign in" }
+  } catch (error: any) {
+    console.error("[v0] Sign in and redirect error:", error)
+    return { error: `An unexpected error occurred: ${error.message || "Please try again"}` }
   }
 }
 

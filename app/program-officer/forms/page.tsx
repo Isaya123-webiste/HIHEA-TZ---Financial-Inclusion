@@ -91,7 +91,8 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
         money_fraud: form.money_fraud || 0,
         trust_erosion: form.trust_erosion || "",
         documentation_delay: form.documentation_delay || "",
-        loan_cost_barriers: form.loan_cost_barriers || "",
+        loan_cost_high: form.loan_cost_high || "",
+        explain_barriers: form.explain_barriers || "",
         number_of_groups: form.number_of_groups || 0,
         members_at_start: form.members_at_start || 0,
         members_at_end: form.members_at_end || 0,
@@ -410,38 +411,26 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
 
             <div>
               <Label htmlFor="trust_erosion">Trust erosion in MFIs</Label>
-              <Select
+              <Input
+                id="trust_erosion"
+                type="number"
                 value={formData.trust_erosion || ""}
-                onValueChange={(value) => setFormData({ ...formData, trust_erosion: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select an option" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                </SelectContent>
-              </Select>
+                onChange={(e) => setFormData({ ...formData, trust_erosion: Number.parseInt(e.target.value) || 0 })}
+                placeholder="0"
+              />
             </div>
 
             <div>
               <Label htmlFor="documentation_delay">Documentation delay</Label>
-              <Select
+              <Input
+                id="documentation_delay"
+                type="number"
                 value={formData.documentation_delay || ""}
-                onValueChange={(value) => setFormData({ ...formData, documentation_delay: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select an option" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="minor">Minor</SelectItem>
-                  <SelectItem value="moderate">Moderate</SelectItem>
-                  <SelectItem value="severe">Severe</SelectItem>
-                </SelectContent>
-              </Select>
+                onChange={(e) =>
+                  setFormData({ ...formData, documentation_delay: Number.parseInt(e.target.value) || 0 })
+                }
+                placeholder="0"
+              />
             </div>
 
             <div>
@@ -514,15 +503,25 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
             </div>
 
             <div>
-              <Label htmlFor="loan_cost_barriers">
-                Loan cost-high? Ask members. Explain barriers for no loans/ no bank account/not approved by bank, no
-                insurance etc.
+              <Label htmlFor="loan_cost_high">Loan cost-high? Ask members.</Label>
+              <Textarea
+                id="loan_cost_high"
+                value={formData.loan_cost_high || ""}
+                onChange={(e) => setFormData({ ...formData, loan_cost_high: e.target.value })}
+                placeholder="Ask members if loan costs are high and provide their feedback"
+                rows={4}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="explain_barriers">
+                Explain barriers for no loans/ no bank account/not approved by bank, no insurance etc.
               </Label>
               <Textarea
-                id="loan_cost_barriers"
-                value={formData.loan_cost_barriers || ""}
-                onChange={(e) => setFormData({ ...formData, loan_cost_barriers: e.target.value })}
-                placeholder="Explain if loan costs are high and describe barriers preventing access to financial services"
+                id="explain_barriers"
+                value={formData.explain_barriers || ""}
+                onChange={(e) => setFormData({ ...formData, explain_barriers: e.target.value })}
+                placeholder="Explain barriers preventing access to financial services"
                 rows={4}
               />
             </div>
@@ -668,15 +667,17 @@ export default function ProgramOfficerFormsPage() {
   const loadForms = async (branchId: string) => {
     try {
       setRefreshing(true)
+      console.log("[v0] Loading forms for branch:", branchId)
       const result = await getFormsByBranch(branchId)
       if (result.success && result.data) {
+        console.log("[v0] Forms loaded:", result.data.length)
         setForms(result.data)
         setFilteredForms(result.data)
       } else {
         showMessage(result.error || "Failed to load forms", "error")
       }
     } catch (error) {
-      console.error("Error loading forms:", error)
+      console.error("[v0] Error loading forms:", error)
       showMessage("Error loading forms", "error")
     } finally {
       setRefreshing(false)
@@ -831,7 +832,7 @@ export default function ProgramOfficerFormsPage() {
       <div className="flex h-screen items-center justify-center bg-white">
         <Card className="w-full max-w-md">
           <CardContent className="text-center space-y-4 p-6">
-            <AlertCircle className="h-12 w-12 text-red-600 mx-auto" />
+            <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-red-600">Access Error</h2>
             <p className="text-gray-600">{error}</p>
             <Button onClick={() => router.push("/")} className="w-full bg-red-600 hover:bg-red-700">
@@ -981,7 +982,7 @@ export default function ProgramOfficerFormsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Total Forms</p>
-                    <p className="text-2xl font-bold">{statistics.total_forms || 0}</p>
+                    <p className="text-2xl font-bold">{statistics?.total_forms || 0}</p>
                   </div>
                   <FileText className="h-8 w-8 text-blue-600" />
                 </div>
@@ -992,7 +993,7 @@ export default function ProgramOfficerFormsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Submitted</p>
-                    <p className="text-2xl font-bold">{statistics.submitted_forms || 0}</p>
+                    <p className="text-2xl font-bold">{statistics?.submitted_forms || 0}</p>
                   </div>
                   <CheckCircle className="h-8 w-8 text-green-600" />
                 </div>
@@ -1003,7 +1004,7 @@ export default function ProgramOfficerFormsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Avg Members</p>
-                    <p className="text-2xl font-bold">{Math.round(statistics.avg_members || 0)}</p>
+                    <p className="text-2xl font-bold">{Math.round(statistics?.avg_members || 0)}</p>
                   </div>
                   <Users className="h-8 w-8 text-purple-600" />
                 </div>
@@ -1014,7 +1015,7 @@ export default function ProgramOfficerFormsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Total Loans</p>
-                    <p className="text-lg font-bold">{formatCurrency(statistics.total_loan_approved || 0)}</p>
+                    <p className="text-lg font-bold">{formatCurrency(statistics?.total_loan_approved || 0)}</p>
                   </div>
                   <DollarSign className="h-8 w-8 text-orange-600" />
                 </div>
@@ -1042,7 +1043,7 @@ export default function ProgramOfficerFormsPage() {
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="submitted">Submitted</SelectItem>
-                    <SelectItem value="reviewed">Submitted</SelectItem>
+                    <SelectItem value="reviewed">Under Review</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1065,6 +1066,13 @@ export default function ProgramOfficerFormsPage() {
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-xl font-semibold text-gray-900">{form.group_name}</h3>
                           {getStatusBadge(form.status)}
+                          {(form as any).reviewed && (
+                            <CheckCircle
+                              className="h-5 w-5 text-green-600"
+                              title="Reviewed by Assistance Program Officer"
+                            />
+                          )}
+                          {form.status === "approved" && <CheckCircle className="h-5 w-5 text-green-600" />}
                         </div>
 
                         <div className="flex items-center gap-6 text-sm text-gray-600 mb-4">
@@ -1079,26 +1087,6 @@ export default function ProgramOfficerFormsPage() {
                           <div className="flex items-center gap-2">
                             <MapPin className="h-4 w-4" />
                             <span>{form.location}</span>
-                          </div>
-                        </div>
-
-                        {/* Key Metrics */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-500">Groups:</span>
-                            <span className="ml-1 font-medium">{form.number_of_groups}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Members:</span>
-                            <span className="ml-1 font-medium">{form.members_at_end}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Applied:</span>
-                            <span className="ml-1 font-medium">{formatCurrency(form.loan_amount_applied)}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Approved:</span>
-                            <span className="ml-1 font-medium">{formatCurrency(form.loan_amount_approved)}</span>
                           </div>
                         </div>
                       </div>

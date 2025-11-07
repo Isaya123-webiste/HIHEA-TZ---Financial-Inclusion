@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, CheckCircle, Target, LogOut, Menu, AlertCircle, BarChart3, FileText, X } from "lucide-react"
+import { Users, CheckCircle, Target, LogOut, Menu, AlertCircle, BarChart3, FileText } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 import { getUserProfile } from "@/lib/auth"
 
@@ -174,16 +174,17 @@ export default function ProgramOfficerPage() {
       {/* Sidebar */}
       <div
         className={`
-          fixed inset-y-0 left-0 z-50 transition-all duration-300 lg:relative lg:translate-x-0
+          fixed inset-y-0 left-0 z-50 transition-all duration-300 ease-in-out lg:relative lg:translate-x-0
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
           ${sidebarCollapsed ? "w-16" : "w-64"}
+          shadow-lg lg:shadow-none
         `}
         style={{ backgroundColor: "#009edb" }}
       >
         <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between h-16 px-4">
-            {!sidebarCollapsed && (
+          {/* Header - Expanded State */}
+          {!sidebarCollapsed && (
+            <div className="flex items-center justify-between h-16 px-4">
               <div className="flex items-center gap-2">
                 <div className="bg-white p-2 rounded-lg">
                   <Target className="h-6 w-6" style={{ color: "#009edb" }} />
@@ -193,26 +194,32 @@ export default function ProgramOfficerPage() {
                   <p className="text-xs opacity-80">HIH Financial</p>
                 </div>
               </div>
-            )}
-            {sidebarCollapsed && (
-              <div className="flex items-center justify-center w-full">
-                <div className="bg-white p-2 rounded-lg">
-                  <Target className="h-6 w-6" style={{ color: "#009edb" }} />
-                </div>
-              </div>
-            )}
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition-colors"
+              >
+                <Menu className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
-            {/* Hamburger button for desktop */}
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition-colors"
-            >
-              {sidebarCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
-            </button>
-          </div>
+          {/* Header - Collapsed State */}
+          {sidebarCollapsed && (
+            <div className="flex flex-col items-center pt-4 pb-2">
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition-colors mb-2"
+              >
+                <Menu className="h-4 w-4" />
+              </button>
+              <div className="bg-white p-2 rounded-lg">
+                <Target className="h-6 w-6" style={{ color: "#009edb" }} />
+              </div>
+            </div>
+          )}
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
+          <nav className={`flex-1 p-4 space-y-2 ${sidebarCollapsed ? "pt-2" : ""}`}>
             {navigationItems.map((item, index) => (
               <Link
                 key={index}
@@ -249,7 +256,7 @@ export default function ProgramOfficerPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden relative">
         {/* Mobile Header */}
         <div className="flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden">
           <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>

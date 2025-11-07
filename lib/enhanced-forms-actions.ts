@@ -1,823 +1,818 @@
 "use server"
 
-import { supabaseAdmin } from "@/lib/supabase-admin"
+import { supabaseAdmin } from "./supabase-admin"
+import { revalidatePath } from "next/cache"
+import { aggregateFormToBranchReport } from "./branch-report-aggregation"
 
+// Form submission interface with extracted fields
 export interface FormSubmission {
   id: string
-  title: string
+  user_id: string
+  branch_id: string | null
   form_type: string
-  status: "draft" | "submitted" | "reviewed" | "approved" | "rejected"
-  group_name: string
-  location: string
-  credit_sources: string
-  num_mfis: number
-  groups_bank_account: number
-  members_bank_account: number
-  inactive_accounts: number
-  num_insurers: number
-  members_insurance: number
-  borrowed_groups: number
-  members_applying_loans: number
-  loan_amount_applied: number
-  date_loan_applied: string | null
-  loan_amount_approved: number
-  members_received_loans: number
-  date_loan_received: string | null
-  members_complaining_delay: number
-  loan_uses: string
-  loan_default: number
-  loan_delinquency: number
-  loan_dropout: number
-  money_fraud: number
-  trust_erosion: string
-  documentation_delay: string
-  loan_cost_barriers: string
-  number_of_groups: number
-  members_at_start: number
-  members_at_end: number
-  bros_at_start: number
-  bros_at_end: number
-  created_by: string
-  branch_id: string
+  form_data: any
+  status: "draft" | "submitted" | "under_review" | "approved" | "rejected" | "sent_back"
+  submitted_at: string | null
+  reviewed_at: string | null
+  reviewed_by: string | null
+  review_notes: string | null
   created_at: string
   updated_at: string
-  submitted_at?: string | null
-  reviewed_by?: string | null
-  reviewed_at?: string | null
-  tags?: string[]
   notes?: string
-  version: number
-  // Additional fields for joined data
+  title?: string
+  group_name?: string
+  location?: string
   creator_name?: string
-  creator_role?: string
-  reviewer_name?: string
+  credit_sources?: string
+  num_mfis?: number
+  groups_bank_account?: number
+  members_bank_account?: number
+  inactive_accounts?: number
+  num_insurers?: number
+  members_insurance?: number
+  borrowed_groups?: number
+  members_applying_loans?: number
+  loan_amount_applied?: number
+  date_loan_applied?: string
+  loan_amount_approved?: number
+  members_received_loans?: number
+  date_loan_received?: string
+  members_complaining_delay?: number
+  loan_uses?: string
+  loan_default?: number
+  loan_delinquency?: number
+  loan_dropout?: number
+  money_fraud?: number
+  trust_erosion?: string
+  documentation_delay?: string
+  loan_cost_high?: string
+  explain_barriers?: string
+  number_of_groups?: number
+  members_at_start?: number
+  members_at_end?: number
+  bros_at_start?: number
+  bros_at_end?: number
+  profiles?: {
+    full_name: string
+    email: string
+  }
+  branches?: {
+    name: string
+  }
 }
 
-export interface FormActionResult {
-  success: boolean
-  data?: any
-  error?: string
-  code?: string
-}
-
-// Enhanced error handling utility
-function handleError(error: any, operation: string): FormActionResult {
-  console.error(`${operation} error:`, error)
-
-  if (error?.code === "PGRST116") {
-    return {
-      success: false,
-      error: "No data found.",
-      code: "NOT_FOUND",
-    }
-  }
-
-  if (error?.code === "23505") {
-    return {
-      success: false,
-      error: "A form with this data already exists.",
-      code: "DUPLICATE",
-    }
-  }
-
-  if (error?.code === "23503") {
-    return {
-      success: false,
-      error: "Invalid reference. Please check your branch assignment.",
-      code: "FOREIGN_KEY",
-    }
-  }
-
-  if (error?.message?.includes("permission denied")) {
-    return {
-      success: false,
-      error: "You don't have permission to perform this action.",
-      code: "PERMISSION_DENIED",
-    }
-  }
-
-  if (error?.message?.includes("relationship") || error?.message?.includes("schema cache")) {
-    return {
-      success: false,
-      error: "Database relationship error. Using fallback query.",
-      code: "RELATIONSHIP_ERROR",
-    }
-  }
+// Helper function to extract form fields from form_data JSONB
+function extractFormFields(formData: any): any {
+  if (!formData) return {}
 
   return {
-    success: false,
-    error: error?.message || `Failed to ${operation.toLowerCase()}`,
-    code: "UNKNOWN",
+    credit_sources: formData.credit_sources || null,
+    num_mfis: formData.num_mfis || 0,
+    groups_bank_account: formData.groups_bank_account || 0,
+    members_bank_account: formData.members_bank_account || 0,
+    inactive_accounts: formData.inactive_accounts || 0,
+    num_insurers: formData.num_insurers || 0,
+    members_insurance: formData.members_insurance || 0,
+    borrowed_groups: formData.borrowed_groups || 0,
+    members_applying_loans: formData.members_applying_loans || 0,
+    loan_amount_applied: formData.loan_amount_applied || 0,
+    date_loan_applied: formData.date_loan_applied || null,
+    loan_amount_approved: formData.loan_amount_approved || 0,
+    members_received_loans: formData.members_received_loans || 0,
+    date_loan_received: formData.date_loan_received || null,
+    members_complaining_delay: formData.members_complaining_delay || 0,
+    loan_uses: formData.loan_uses || null,
+    loan_default: formData.loan_default || 0,
+    loan_delinquency: formData.loan_delinquency || 0,
+    loan_dropout: formData.loan_dropout || 0,
+    money_fraud: formData.money_fraud || 0,
+    trust_erosion: formData.trust_erosion || null,
+    documentation_delay: formData.documentation_delay || null,
+    loan_cost_high: formData.loan_cost_high || null,
+    explain_barriers: formData.explain_barriers || null,
+    number_of_groups: formData.number_of_groups || 0,
+    members_at_start: formData.members_at_start || 0,
+    members_at_end: formData.members_at_end || 0,
+    bros_at_start: formData.bros_at_start || 0,
+    bros_at_end: formData.bros_at_end || 0,
   }
 }
 
-// Validate user and get profile
-async function validateUserAndGetProfile(userId: string): Promise<FormActionResult> {
+// Get forms by user
+export async function getFormsByUser(userId: string) {
   try {
-    const { data: profile, error } = await supabaseAdmin
+    console.log("Fetching forms for user:", userId)
+
+    if (!userId) {
+      console.error("No user ID provided")
+      return { success: false, error: "User ID is required" }
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("form_submissions")
+      .select(
+        "id, user_id, branch_id, form_type, form_data, status, submitted_at, reviewed_at, reviewed_by, review_notes, created_at, updated_at, group_name, location, title, notes",
+      )
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("Error fetching forms by user:", error)
+      return { success: false, error: `Failed to fetch forms: ${error.message}` }
+    }
+
+    // Transform the data to match the expected format
+    const transformedData = (data || []).map((item: any) => {
+      const formFields = extractFormFields(item.form_data)
+
+      return {
+        id: item.id,
+        user_id: item.user_id,
+        branch_id: item.branch_id,
+        form_type: item.form_type || "branch_report",
+        form_data: item.form_data || {},
+        status: item.status || "draft",
+        submitted_at: item.submitted_at,
+        reviewed_at: item.reviewed_at,
+        reviewed_by: item.reviewed_by,
+        review_notes: item.review_notes,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        notes: item.notes || item.review_notes || "",
+        group_name: item.group_name || item.form_data?.group_name || "Unknown Group",
+        location: item.location || item.form_data?.location || "",
+        title: item.title || item.form_data?.title || "Form Submission",
+        creator_name: "Branch Report Officer",
+        ...formFields,
+      }
+    })
+
+    console.log("Successfully fetched forms for user:", transformedData.length)
+    return { success: true, data: transformedData }
+  } catch (error) {
+    console.error("Unexpected error in getFormsByUser:", error)
+    return { success: false, error: "An unexpected error occurred while fetching forms" }
+  }
+}
+
+// Get forms by branch (for Program Officer)
+export async function getFormsByBranch(branchId: string) {
+  try {
+    console.log("Fetching forms for branch:", branchId)
+
+    if (!branchId) {
+      console.error("No branch ID provided")
+      return { success: false, error: "Branch ID is required" }
+    }
+
+    const { data: formData, error: formError } = await supabaseAdmin
+      .from("form_submissions")
+      .select(
+        "id, user_id, branch_id, form_type, form_data, status, submitted_at, reviewed_at, reviewed_by, review_notes, created_at, updated_at, group_name, location, title, notes",
+      )
+      .eq("branch_id", branchId)
+      .order("created_at", { ascending: false })
+
+    if (formError) {
+      console.error("Error fetching forms by branch:", formError)
+      return { success: false, error: `Failed to fetch forms: ${formError.message}` }
+    }
+
+    let additionalForms: any[] = []
+    if (!formData || formData.length === 0) {
+      const { data: branchUsers, error: usersError } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("branch_id", branchId)
+
+      if (!usersError && branchUsers) {
+        const userIds = branchUsers.map((u) => u.id)
+
+        if (userIds.length > 0) {
+          const { data: userForms, error: userFormsError } = await supabaseAdmin
+            .from("form_submissions")
+            .select(
+              "id, user_id, branch_id, form_type, form_data, status, submitted_at, reviewed_at, reviewed_by, review_notes, created_at, updated_at, group_name, location, title, notes",
+            )
+            .in("user_id", userIds)
+
+          if (!userFormsError && userForms) {
+            additionalForms = userForms
+          }
+        }
+      }
+    }
+
+    const allFormData = [...(formData || []), ...additionalForms]
+    const userIds = [...new Set(allFormData.map((form: any) => form.user_id).filter(Boolean))]
+    let profilesMap: Record<string, any> = {}
+
+    if (userIds.length > 0) {
+      const { data: profilesData, error: profilesError } = await supabaseAdmin
+        .from("profiles")
+        .select("id, full_name, email, role, branch_id")
+        .in("id", userIds)
+
+      if (!profilesError && profilesData) {
+        profilesMap = profilesData.reduce((acc: Record<string, any>, profile: any) => {
+          acc[profile.id] = profile
+          return acc
+        }, {})
+      }
+    }
+
+    const transformedData = allFormData.map((item: any) => {
+      const userProfile = profilesMap[item.user_id]
+      const formFields = extractFormFields(item.form_data)
+
+      return {
+        id: item.id,
+        user_id: item.user_id,
+        branch_id: item.branch_id,
+        form_type: item.form_type || "branch_report",
+        form_data: item.form_data || {},
+        status: item.status || "draft",
+        submitted_at: item.submitted_at,
+        reviewed_at: item.reviewed_at,
+        reviewed_by: item.reviewed_by,
+        review_notes: item.review_notes,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        notes: item.notes || item.review_notes || "",
+        group_name: item.group_name || item.form_data?.group_name || "Unknown Group",
+        location: item.location || item.form_data?.location || "",
+        title: item.title || item.form_data?.title || "Form Submission",
+        creator_name: userProfile?.full_name || "Branch Report Officer",
+        ...formFields,
+        profiles: userProfile
+          ? {
+              full_name: userProfile.full_name,
+              email: userProfile.email,
+            }
+          : undefined,
+      }
+    })
+
+    console.log("Successfully fetched forms for branch:", transformedData.length)
+    return { success: true, data: transformedData }
+  } catch (error) {
+    console.error("Unexpected error in getFormsByBranch:", error)
+    return { success: false, error: "An unexpected error occurred while fetching forms" }
+  }
+}
+
+// Get form by ID
+export async function getFormById(formId: string, userId: string) {
+  try {
+    console.log("Fetching form by ID:", formId, "for user:", userId)
+
+    if (!formId || !userId) {
+      return { success: false, error: "Form ID and User ID are required" }
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("form_submissions")
+      .select(
+        "id, user_id, branch_id, form_type, form_data, status, submitted_at, reviewed_at, reviewed_by, review_notes, created_at, updated_at, group_name, location, title, notes",
+      )
+      .eq("id", formId)
+      .eq("user_id", userId)
+      .single()
+
+    if (error) {
+      console.error("Error fetching form by ID:", error)
+      return { success: false, error: `Failed to fetch form: ${error.message}` }
+    }
+
+    if (!data) {
+      return { success: false, error: "Form not found" }
+    }
+
+    const formFields = extractFormFields(data.form_data)
+
+    const transformedData = {
+      id: data.id,
+      user_id: data.user_id,
+      branch_id: data.branch_id,
+      form_type: data.form_type || "branch_report",
+      form_data: data.form_data || {},
+      status: data.status || "draft",
+      submitted_at: data.submitted_at,
+      reviewed_at: data.reviewed_at,
+      reviewed_by: data.reviewed_by,
+      review_notes: data.review_notes,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      notes: data.notes || data.review_notes || "",
+      group_name: data.group_name || data.form_data?.group_name || "Unknown Group",
+      location: data.location || data.form_data?.location || "",
+      title: data.title || data.form_data?.title || "Form Submission",
+      creator_name: "Branch Report Officer",
+      ...formFields,
+    }
+
+    console.log("Successfully fetched form by ID")
+    return { success: true, data: transformedData }
+  } catch (error) {
+    console.error("Unexpected error in getFormById:", error)
+    return { success: false, error: "An unexpected error occurred while fetching form" }
+  }
+}
+
+// Save draft form
+export async function saveDraftForm(userId: string, formData: any) {
+  try {
+    console.log("Saving draft form for user:", userId)
+
+    if (!userId) {
+      return { success: false, error: "User ID is required" }
+    }
+
+    const { data: userProfile, error: profileError } = await supabaseAdmin
       .from("profiles")
-      .select("id, branch_id, role, status, full_name")
+      .select("branch_id")
       .eq("id", userId)
       .single()
 
-    if (error) {
-      return handleError(error, "Get user profile")
+    if (profileError) {
+      console.error("Error fetching user profile:", profileError)
+      return { success: false, error: "Failed to get user profile" }
     }
 
-    if (!profile) {
-      return {
-        success: false,
-        error: "User profile not found. Please contact administrator.",
-        code: "PROFILE_NOT_FOUND",
-      }
+    const formId = formData.id
+    delete formData.id
+
+    const submissionData = {
+      user_id: userId,
+      branch_id: userProfile?.branch_id || null,
+      form_type: "branch_report",
+      form_data: formData,
+      status: "draft" as const,
+      updated_at: new Date().toISOString(),
+      group_name: formData.group_name || null,
+      location: formData.location || null,
+      title: formData.title || `Financial Inclusion Report - ${formData.group_name || "Draft"}`,
+      notes: formData.notes || null,
     }
 
-    if (profile.status !== "active") {
-      return {
-        success: false,
-        error: "Your account is not active. Please contact administrator.",
-        code: "ACCOUNT_INACTIVE",
-      }
-    }
-
-    if (!profile.branch_id) {
-      return {
-        success: false,
-        error: "No branch assigned to your account. Please contact administrator.",
-        code: "NO_BRANCH",
-      }
-    }
-
-    return {
-      success: true,
-      data: profile,
-    }
-  } catch (error) {
-    return handleError(error, "Validate user")
-  }
-}
-
-// Prepare form data for database insertion/update
-function prepareFormData(formData: any, profile: any, isSubmission = false): any {
-  const baseData = {
-    title: formData.group_name || "Draft Report",
-    form_type: "financial_inclusion_report",
-    group_name: formData.group_name || "",
-    location: formData.location || "",
-    credit_sources: formData.credit_sources || "",
-    num_mfis: Number.parseInt(formData.num_mfis) || 0,
-    groups_bank_account: Number.parseInt(formData.groups_bank_account) || 0,
-    members_bank_account: Number.parseInt(formData.members_bank_account) || 0,
-    inactive_accounts: Number.parseInt(formData.inactive_accounts) || 0,
-    num_insurers: Number.parseInt(formData.num_insurers) || 0,
-    members_insurance: Number.parseInt(formData.members_insurance) || 0,
-    borrowed_groups: Number.parseInt(formData.borrowed_groups) || 0,
-    members_applying_loans: Number.parseInt(formData.members_applying_loans) || 0,
-    loan_amount_applied: Number.parseFloat(formData.loan_amount_applied) || 0,
-    date_loan_applied: formData.date_loan_applied || null,
-    loan_amount_approved: Number.parseFloat(formData.loan_amount_approved) || 0,
-    members_received_loans: Number.parseInt(formData.members_received_loans) || 0,
-    date_loan_received: formData.date_loan_received || null,
-    members_complaining_delay: Number.parseInt(formData.members_complaining_delay) || 0,
-    loan_uses: formData.loan_uses || "",
-    loan_default: Number.parseFloat(formData.loan_default) || 0,
-    loan_delinquency: Number.parseFloat(formData.loan_delinquency) || 0,
-    loan_dropout: Number.parseInt(formData.loan_dropout) || 0,
-    money_fraud: Number.parseInt(formData.money_fraud) || 0,
-    trust_erosion: formData.trust_erosion || "",
-    documentation_delay: formData.documentation_delay || "",
-    loan_cost_barriers: formData.loan_cost_barriers || "",
-    number_of_groups: Number.parseInt(formData.number_of_groups) || 0,
-    members_at_start: Number.parseInt(formData.members_at_start) || 0,
-    members_at_end: Number.parseInt(formData.members_at_end) || 0,
-    bros_at_start: Number.parseInt(formData.bros_at_start) || 0,
-    bros_at_end: Number.parseInt(formData.bros_at_end) || 0,
-    status: isSubmission ? "submitted" : "draft",
-    created_by: profile.id,
-    branch_id: profile.branch_id,
-    notes: formData.notes || "",
-    tags: formData.tags || [],
-  }
-
-  return baseData
-}
-
-export async function saveDraftForm(userId: string, formData: any): Promise<FormActionResult> {
-  try {
-    console.log("Starting save draft operation for user:", userId)
-
-    // Validate user and get profile
-    const profileResult = await validateUserAndGetProfile(userId)
-    if (!profileResult.success) {
-      return profileResult
-    }
-
-    const profile = profileResult.data
-    console.log("User profile validated:", profile.full_name)
-
-    // Prepare form data
-    const preparedData = prepareFormData(formData, profile, false)
-    console.log("Form data prepared for save")
-
-    let result
-
-    if (formData.id) {
-      // Update existing form
-      console.log("Updating existing form:", formData.id)
+    if (formId) {
       const { data, error } = await supabaseAdmin
         .from("form_submissions")
-        .update(preparedData)
-        .eq("id", formData.id)
-        .eq("created_by", userId)
+        .update(submissionData)
+        .eq("id", formId)
+        .eq("user_id", userId)
         .select()
         .single()
 
       if (error) {
-        return handleError(error, "Update draft form")
+        console.error("Error updating draft:", error)
+        return { success: false, error: `Failed to update draft: ${error.message}` }
       }
 
-      result = data
+      console.log("Draft updated successfully")
+      return { success: true, data }
     } else {
-      // Create new form
-      console.log("Creating new form")
-      const { data, error } = await supabaseAdmin.from("form_submissions").insert(preparedData).select().single()
-
-      if (error) {
-        return handleError(error, "Create draft form")
-      }
-
-      result = data
-    }
-
-    console.log("Form saved successfully:", result.id)
-    return {
-      success: true,
-      data: result,
-    }
-  } catch (error) {
-    return handleError(error, "Save draft form")
-  }
-}
-
-export async function submitForm(userId: string, formData: any): Promise<FormActionResult> {
-  try {
-    console.log("Starting form submission for user:", userId)
-
-    // Validate user and get profile
-    const profileResult = await validateUserAndGetProfile(userId)
-    if (!profileResult.success) {
-      return profileResult
-    }
-
-    const profile = profileResult.data
-
-    // Validate required fields for submission
-    const requiredFields = ["group_name", "location", "credit_sources"]
-    for (const field of requiredFields) {
-      if (!formData[field] || formData[field].trim() === "") {
-        return {
-          success: false,
-          error: `${field.replace("_", " ")} is required for submission.`,
-          code: "VALIDATION_ERROR",
-        }
-      }
-    }
-
-    // Prepare form data for submission
-    const preparedData = prepareFormData(formData, profile, true)
-    console.log("Form data prepared for submission")
-
-    let result
-
-    if (formData.id) {
-      // Update existing form to submitted status
       const { data, error } = await supabaseAdmin
         .from("form_submissions")
-        .update(preparedData)
-        .eq("id", formData.id)
-        .eq("created_by", userId)
+        .insert({
+          ...submissionData,
+          created_at: new Date().toISOString(),
+        })
         .select()
         .single()
 
       if (error) {
-        return handleError(error, "Submit form")
+        console.error("Error creating draft:", error)
+        return { success: false, error: `Failed to create draft: ${error.message}` }
       }
 
-      result = data
-    } else {
-      // Create new form with submitted status
-      const { data, error } = await supabaseAdmin.from("form_submissions").insert(preparedData).select().single()
-
-      if (error) {
-        return handleError(error, "Submit form")
-      }
-
-      result = data
-    }
-
-    // Try to find Program Officer in the same branch to notify (optional)
-    try {
-      const { data: programOfficers } = await supabaseAdmin
-        .from("profiles")
-        .select("id, full_name")
-        .eq("branch_id", profile.branch_id)
-        .eq("role", "program_officer")
-        .eq("status", "active")
-
-      // Create notifications for Program Officers if they exist
-      if (programOfficers && programOfficers.length > 0) {
-        for (const po of programOfficers) {
-          try {
-            await createNotification(
-              po.id,
-              "New Form Submitted",
-              `A new form "${result.group_name || result.title}" has been submitted by ${profile.full_name} and requires your review.`,
-              "info",
-              result.id,
-            )
-          } catch (notificationError) {
-            console.warn("Failed to create notification for program officer:", po.id, notificationError)
-            // Continue without failing the form submission
-          }
-        }
-      }
-    } catch (notificationError) {
-      console.warn("Failed to send notifications to program officers:", notificationError)
-      // Continue without failing the form submission
-    }
-
-    console.log("Form submitted successfully:", result.id)
-    return {
-      success: true,
-      data: result,
+      console.log("Draft created successfully")
+      return { success: true, data }
     }
   } catch (error) {
-    return handleError(error, "Submit form")
+    console.error("Unexpected error in saveDraftForm:", error)
+    return { success: false, error: "An unexpected error occurred while saving draft" }
   }
 }
 
-export async function getFormsByUser(userId: string): Promise<FormActionResult> {
+// Submit form
+export async function submitForm(userId: string, formData: any) {
   try {
-    const { data, error } = await supabaseAdmin
-      .from("form_submissions")
-      .select("*")
-      .eq("created_by", userId)
-      .order("updated_at", { ascending: false })
+    console.log("Submitting form for user:", userId)
 
-    if (error) {
-      return handleError(error, "Get user forms")
+    if (!userId) {
+      return { success: false, error: "User ID is required" }
     }
 
-    return {
-      success: true,
-      data: data || [],
-    }
-  } catch (error) {
-    return handleError(error, "Get user forms")
-  }
-}
-
-export async function getFormsByBranch(branchId: string, status?: string): Promise<FormActionResult> {
-  try {
-    // First try using the view if it exists
-    let query = supabaseAdmin.from("form_submissions_with_profiles").select("*").eq("branch_id", branchId)
-
-    if (status) {
-      query = query.eq("status", status)
-    } else {
-      query = query.in("status", ["submitted", "reviewed", "approved"])
-    }
-
-    const { data: viewData, error: viewError } = await query.order("submitted_at", { ascending: false })
-
-    if (!viewError && viewData) {
-      return {
-        success: true,
-        data: viewData || [],
-      }
-    }
-
-    // Fallback: Get forms first, then get creator names separately
-    console.log("View query failed, using fallback approach")
-
-    let fallbackQuery = supabaseAdmin.from("form_submissions").select("*").eq("branch_id", branchId)
-
-    if (status) {
-      fallbackQuery = fallbackQuery.eq("status", status)
-    } else {
-      fallbackQuery = fallbackQuery.in("status", ["submitted", "reviewed", "approved"])
-    }
-
-    const { data: forms, error: formsError } = await fallbackQuery.order("submitted_at", { ascending: false })
-
-    if (formsError) {
-      return handleError(formsError, "Get branch forms")
-    }
-
-    // Get creator names for each form
-    const formsWithCreators = await Promise.all(
-      (forms || []).map(async (form) => {
-        try {
-          const { data: creator } = await supabaseAdmin
-            .from("profiles")
-            .select("full_name, role")
-            .eq("id", form.created_by)
-            .single()
-
-          return {
-            ...form,
-            creator_name: creator?.full_name || "Unknown User",
-            creator_role: creator?.role || "unknown",
-            profiles: creator ? { full_name: creator.full_name, role: creator.role } : null,
-          }
-        } catch (error) {
-          console.error("Error fetching creator for form:", form.id, error)
-          return {
-            ...form,
-            creator_name: "Unknown User",
-            creator_role: "unknown",
-            profiles: null,
-          }
-        }
-      }),
-    )
-
-    return {
-      success: true,
-      data: formsWithCreators,
-    }
-  } catch (error) {
-    return handleError(error, "Get branch forms")
-  }
-}
-
-export async function getFormById(formId: string, userId: string): Promise<FormActionResult> {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from("form_submissions")
-      .select("*")
-      .eq("id", formId)
-      .eq("created_by", userId)
+    const { data: userProfile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("branch_id")
+      .eq("id", userId)
       .single()
 
-    if (error) {
-      return handleError(error, "Get form")
+    if (profileError) {
+      console.error("Error fetching user profile:", profileError)
+      return { success: false, error: "Failed to get user profile" }
     }
 
-    return {
-      success: true,
-      data: data,
+    const formId = formData.id
+    delete formData.id
+
+    const submissionData = {
+      user_id: userId,
+      branch_id: userProfile?.branch_id || null,
+      form_type: "branch_report",
+      form_data: formData,
+      status: "submitted" as const,
+      submitted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      group_name: formData.group_name || null,
+      location: formData.location || null,
+      title: formData.title || `Financial Inclusion Report - ${formData.group_name || "Submission"}`,
+      notes: formData.notes || null,
+    }
+
+    if (formId) {
+      const { data, error } = await supabaseAdmin
+        .from("form_submissions")
+        .update(submissionData)
+        .eq("id", formId)
+        .eq("user_id", userId)
+        .select()
+        .single()
+
+      if (error) {
+        console.error("Error submitting form:", error)
+        return { success: false, error: `Failed to submit form: ${error.message}` }
+      }
+
+      console.log("Form submitted successfully")
+      return { success: true, data }
+    } else {
+      const { data, error } = await supabaseAdmin
+        .from("form_submissions")
+        .insert({
+          ...submissionData,
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error("Error submitting form:", error)
+        return { success: false, error: `Failed to submit form: ${error.message}` }
+      }
+
+      console.log("Form submitted successfully")
+      return { success: true, data }
     }
   } catch (error) {
-    return handleError(error, "Get form")
+    console.error("Unexpected error in submitForm:", error)
+    return { success: false, error: "An unexpected error occurred while submitting form" }
   }
 }
 
-export async function deleteForm(formId: string, userId: string): Promise<FormActionResult> {
+// Delete form
+export async function deleteForm(formId: string, userId: string) {
   try {
+    console.log("Deleting form:", formId, "for user:", userId)
+
+    if (!formId || !userId) {
+      return { success: false, error: "Form ID and User ID are required" }
+    }
+
     const { error } = await supabaseAdmin
       .from("form_submissions")
       .delete()
       .eq("id", formId)
-      .eq("created_by", userId)
-      .eq("status", "draft") // Only allow deletion of drafts
+      .eq("user_id", userId)
+      .eq("status", "draft")
 
     if (error) {
-      return handleError(error, "Delete form")
+      console.error("Error deleting form:", error)
+      return { success: false, error: `Failed to delete form: ${error.message}` }
     }
 
-    return {
-      success: true,
-      data: { message: "Form deleted successfully" },
-    }
+    console.log("Form deleted successfully")
+    return { success: true }
   } catch (error) {
-    return handleError(error, "Delete form")
+    console.error("Unexpected error in deleteForm:", error)
+    return { success: false, error: "An unexpected error occurred while deleting form" }
   }
 }
 
+// Search forms
 export async function searchForms(
   userId: string,
-  searchParams: {
+  filters: {
     searchTerm?: string
     dateFrom?: string
-    dateTo?: string
     groupFilter?: string
     status?: string
   },
-): Promise<FormActionResult> {
+) {
   try {
-    // Get user profile to determine role and branch
-    const profileResult = await validateUserAndGetProfile(userId)
-    if (!profileResult.success) {
-      return profileResult
+    console.log("Searching forms for user:", userId, "with filters:", filters)
+
+    if (!userId) {
+      return { success: false, error: "User ID is required" }
     }
 
-    const profile = profileResult.data
+    let query = supabaseAdmin
+      .from("form_submissions")
+      .select(
+        "id, user_id, branch_id, form_type, form_data, status, submitted_at, reviewed_at, reviewed_by, review_notes, created_at, updated_at, group_name, location, title, notes",
+      )
+      .eq("user_id", userId)
 
-    // Use the search function if it exists, otherwise fallback to simple query
-    try {
-      const { data, error } = await supabaseAdmin.rpc("search_forms", {
-        search_term: searchParams.searchTerm || "",
-        filter_branch_id: profile.branch_id,
-        filter_status: searchParams.status || "",
-        filter_date_from: searchParams.dateFrom || null,
-        filter_date_to: searchParams.dateTo || null,
-        user_role: profile.role,
-        user_id: userId,
-      })
-
-      if (!error && data) {
-        return {
-          success: true,
-          data: data || [],
-        }
-      }
-    } catch (rpcError) {
-      console.log("RPC search function not available, using fallback")
+    if (filters.status && filters.status !== "all") {
+      query = query.eq("status", filters.status)
     }
 
-    // Fallback to simple query
-    let query = supabaseAdmin.from("form_submissions").select("*").eq("branch_id", profile.branch_id)
-
-    if (searchParams.status) {
-      query = query.eq("status", searchParams.status)
+    if (filters.dateFrom) {
+      query = query.gte("created_at", filters.dateFrom)
     }
 
-    if (searchParams.searchTerm) {
-      query = query.or(`title.ilike.%${searchParams.searchTerm}%,group_name.ilike.%${searchParams.searchTerm}%`)
-    }
-
-    const { data, error } = await query.order("updated_at", { ascending: false })
+    const { data, error } = await query.order("created_at", { ascending: false })
 
     if (error) {
-      return handleError(error, "Search forms")
+      console.error("Error searching forms:", error)
+      return { success: false, error: `Failed to search forms: ${error.message}` }
     }
 
-    return {
-      success: true,
-      data: data || [],
+    let filteredData = data || []
+
+    if (filters.searchTerm) {
+      const searchLower = filters.searchTerm.toLowerCase()
+      filteredData = filteredData.filter((item: any) => {
+        const groupName = item.group_name || item.form_data?.group_name || ""
+        const location = item.location || item.form_data?.location || ""
+        const title = item.title || item.form_data?.title || ""
+
+        return (
+          groupName.toLowerCase().includes(searchLower) ||
+          location.toLowerCase().includes(searchLower) ||
+          title.toLowerCase().includes(searchLower)
+        )
+      })
     }
-  } catch (error) {
-    return handleError(error, "Search forms")
-  }
-}
 
-export async function getFormStatistics(branchId: string): Promise<FormActionResult> {
-  try {
-    // Try to use the view first
-    const { data: viewData, error: viewError } = await supabaseAdmin
-      .from("form_statistics")
-      .select("*")
-      .eq("branch_id", branchId)
-      .single()
+    if (filters.groupFilter) {
+      const groupLower = filters.groupFilter.toLowerCase()
+      filteredData = filteredData.filter((item: any) => {
+        const groupName = item.group_name || item.form_data?.group_name || ""
+        return groupName.toLowerCase().includes(groupLower)
+      })
+    }
 
-    if (!viewError && viewData) {
+    const transformedData = filteredData.map((item: any) => {
+      const formFields = extractFormFields(item.form_data)
+
       return {
-        success: true,
-        data: viewData,
+        id: item.id,
+        user_id: item.user_id,
+        branch_id: item.branch_id,
+        form_type: item.form_type || "branch_report",
+        form_data: item.form_data || {},
+        status: item.status || "draft",
+        submitted_at: item.submitted_at,
+        reviewed_at: item.reviewed_at,
+        reviewed_by: item.reviewed_by,
+        review_notes: item.review_notes,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        notes: item.notes || item.review_notes || "",
+        group_name: item.group_name || item.form_data?.group_name || "Unknown Group",
+        location: item.location || item.form_data?.location || "",
+        title: item.title || item.form_data?.title || "Form Submission",
+        creator_name: "Branch Report Officer",
+        ...formFields,
       }
-    }
+    })
 
-    // Fallback: Calculate statistics manually
-    const { data: forms, error: formsError } = await supabaseAdmin
-      .from("form_submissions")
-      .select("*")
-      .eq("branch_id", branchId)
-
-    if (formsError && formsError.code !== "PGRST116") {
-      return handleError(formsError, "Get form statistics")
-    }
-
-    const formsList = forms || []
-    const statistics = {
-      total_forms: formsList.length,
-      draft_forms: formsList.filter((f) => f.status === "draft").length,
-      submitted_forms: formsList.filter((f) => f.status === "submitted").length,
-      reviewed_forms: formsList.filter((f) => f.status === "reviewed").length,
-      approved_forms: formsList.filter((f) => f.status === "approved").length,
-      avg_members:
-        formsList.length > 0 ? formsList.reduce((sum, f) => sum + (f.members_at_end || 0), 0) / formsList.length : 0,
-      total_loan_applied: formsList.reduce((sum, f) => sum + (f.loan_amount_applied || 0), 0),
-      total_loan_approved: formsList.reduce((sum, f) => sum + (f.loan_amount_approved || 0), 0),
-    }
-
-    return {
-      success: true,
-      data: statistics,
-    }
+    console.log("Successfully searched forms:", transformedData.length)
+    return { success: true, data: transformedData }
   } catch (error) {
-    return handleError(error, "Get form statistics")
+    console.error("Unexpected error in searchForms:", error)
+    return { success: false, error: "An unexpected error occurred while searching forms" }
   }
 }
 
-export async function sendFormBack(
-  formId: string,
-  programOfficerId: string,
-  reason: string,
-): Promise<FormActionResult> {
+// Approve form and aggregate to branch reports
+export async function approveForm(formId: string, programOfficerId: string) {
   try {
-    // Get the form to check permissions and get creator info
-    const { data: form, error: formError } = await supabaseAdmin
+    console.log("Approving form:", formId, "by program officer:", programOfficerId)
+
+    if (!formId || !programOfficerId) {
+      return { success: false, error: "Form ID and Program Officer ID are required" }
+    }
+
+    // First, fetch the form data before updating
+    const { data: formData, error: fetchError } = await supabaseAdmin
       .from("form_submissions")
-      .select("*")
+      .select("id, branch_id, form_data, status")
       .eq("id", formId)
       .single()
 
-    if (formError || !form) {
-      return handleError(formError, "Get form for send back")
+    if (fetchError || !formData) {
+      console.error("Error fetching form for approval:", fetchError)
+      return { success: false, error: `Failed to fetch form data: ${fetchError?.message || "Form not found"}` }
     }
 
-    // Get creator info separately
-    const { data: creator } = await supabaseAdmin
-      .from("profiles")
-      .select("full_name")
-      .eq("id", form.created_by)
-      .single()
-
-    // Update form status to draft and add reason
-    const { data, error } = await supabaseAdmin
-      .from("form_submissions")
-      .update({
-        status: "draft",
-        notes: form.notes
-          ? `${form.notes}\n\nSent back by Program Officer: ${reason}`
-          : `Sent back by Program Officer: ${reason}`,
-        reviewed_by: programOfficerId,
-        reviewed_at: new Date().toISOString(),
-      })
-      .eq("id", formId)
-      .select()
-      .single()
-
-    if (error) {
-      return handleError(error, "Send form back")
-    }
-
-    // Try to create notification for Branch Report Officer
-    try {
-      await createNotification(
-        form.created_by,
-        "Form Sent Back for Revision",
-        `Your form "${form.group_name || form.title}" has been sent back by the Program Officer for revision. Reason: ${reason}`,
-        "warning",
-        formId,
-      )
-    } catch (notificationError) {
-      console.warn("Failed to create notification for form send back:", notificationError)
-      // Continue without failing the operation
-    }
-
-    return { success: true, data }
-  } catch (error) {
-    return handleError(error, "Send form back")
-  }
-}
-
-export async function updateFormByProgramOfficer(
-  formId: string,
-  programOfficerId: string,
-  formData: any,
-): Promise<FormActionResult> {
-  try {
-    // Get the form to check permissions and get creator info
-    const { data: form, error: formError } = await supabaseAdmin
-      .from("form_submissions")
-      .select("*")
-      .eq("id", formId)
-      .single()
-
-    if (formError || !form) {
-      return handleError(formError, "Get form for update")
-    }
-
-    // Prepare the updated data
-    const updatedData = {
-      ...formData,
-      reviewed_by: programOfficerId,
-      reviewed_at: new Date().toISOString(),
-      notes: form.notes ? `${form.notes}\n\nEdited by Program Officer` : "Edited by Program Officer",
-    }
-
-    // Update the form
-    const { data, error } = await supabaseAdmin
-      .from("form_submissions")
-      .update(updatedData)
-      .eq("id", formId)
-      .select()
-      .single()
-
-    if (error) {
-      return handleError(error, "Update form by Program Officer")
-    }
-
-    // Try to create notification for Branch Report Officer
-    try {
-      await createNotification(
-        form.created_by,
-        "Form Updated by Program Officer",
-        `Your form "${form.group_name || form.title}" has been updated by the Program Officer. Please review the changes.`,
-        "info",
-        formId,
-      )
-    } catch (notificationError) {
-      console.warn("Failed to create notification for form update:", notificationError)
-      // Continue without failing the operation
-    }
-
-    return { success: true, data }
-  } catch (error) {
-    return handleError(error, "Update form by Program Officer")
-  }
-}
-
-export async function approveForm(formId: string, programOfficerId: string): Promise<FormActionResult> {
-  try {
-    // Get the form to check permissions and get creator info
-    const { data: form, error: formError } = await supabaseAdmin
-      .from("form_submissions")
-      .select("*")
-      .eq("id", formId)
-      .single()
-
-    if (formError || !form) {
-      return handleError(formError, "Get form for approval")
+    // Check if already approved
+    if (formData.status === "approved") {
+      console.log("Form already approved, skipping")
+      return { success: true, message: "Form is already approved" }
     }
 
     // Update form status to approved
-    const { data, error } = await supabaseAdmin
+    const { data: updatedForm, error: updateError } = await supabaseAdmin
       .from("form_submissions")
       .update({
         status: "approved",
         reviewed_by: programOfficerId,
         reviewed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", formId)
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error("Error approving form:", updateError)
+      return { success: false, error: `Failed to approve form: ${updateError.message}` }
+    }
+
+    console.log("Form approved successfully, status updated to:", updatedForm.status)
+
+    // Now aggregate to branch report
+    if (formData.branch_id && formData.form_data) {
+      console.log("Starting aggregation to branch report for branch:", formData.branch_id)
+      const aggregationResult = await aggregateFormToBranchReport(formId, formData.branch_id, formData.form_data)
+
+      if (!aggregationResult.success) {
+        console.error("Error aggregating to branch report:", aggregationResult.error)
+        console.warn("⚠️ Form approved but aggregation failed:", aggregationResult.error)
+        // Don't fail the approval, just log the warning
+      } else {
+        console.log("✓ Form successfully aggregated to branch report")
+      }
+    } else {
+      console.warn("⚠️ Form has no branch_id or form_data, skipping aggregation")
+    }
+
+    revalidatePath("/program-officer/forms")
+    revalidatePath("/branch-report-officer/forms")
+    return { success: true, data: updatedForm }
+  } catch (error: any) {
+    console.error("Unexpected error in approveForm:", error)
+    return { success: false, error: `An unexpected error occurred while approving form: ${error.message}` }
+  }
+}
+
+// Send form back
+export async function sendFormBack(formId: string, programOfficerId: string, reason: string) {
+  try {
+    console.log("Sending form back:", formId, "with reason:", reason)
+
+    if (!formId || !programOfficerId || !reason) {
+      return { success: false, error: "Form ID, Program Officer ID, and reason are required" }
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("form_submissions")
+      .update({
+        status: "sent_back",
+        reviewed_by: programOfficerId,
+        reviewed_at: new Date().toISOString(),
+        review_notes: reason,
+        updated_at: new Date().toISOString(),
       })
       .eq("id", formId)
       .select()
       .single()
 
     if (error) {
-      return handleError(error, "Approve form")
+      console.error("Error sending form back:", error)
+      return { success: false, error: `Failed to send form back: ${error.message}` }
     }
 
-    // Try to create notification for Branch Report Officer
-    try {
-      await createNotification(
-        form.created_by,
-        "Form Approved",
-        `Your form "${form.group_name || form.title}" has been approved by the Program Officer.`,
-        "success",
-        formId,
-      )
-    } catch (notificationError) {
-      console.warn("Failed to create notification for form approval:", notificationError)
-      // Continue without failing the operation
-    }
-
+    console.log("Form sent back successfully")
+    revalidatePath("/program-officer/forms")
+    revalidatePath("/branch-report-officer/forms")
     return { success: true, data }
   } catch (error) {
-    return handleError(error, "Approve form")
+    console.error("Unexpected error in sendFormBack:", error)
+    return { success: false, error: "An unexpected error occurred while sending form back" }
   }
 }
 
-// Helper function to create notifications
-async function createNotification(
-  userId: string,
-  title: string,
-  message: string,
-  type: "success" | "info" | "warning" | "error",
-  formId: string,
-): Promise<void> {
+// Update form by program officer
+export async function updateFormByProgramOfficer(formId: string, programOfficerId: string, formData: any) {
   try {
-    // Check if notifications table exists first
-    const { data: tableExists } = await supabaseAdmin
-      .from("information_schema.tables")
-      .select("table_name")
-      .eq("table_schema", "public")
-      .eq("table_name", "notifications")
+    console.log("Program officer updating form:", formId)
+
+    if (!formId || !programOfficerId) {
+      return { success: false, error: "Form ID and Program Officer ID are required" }
+    }
+
+    const updateData = {
+      form_data: formData,
+      updated_at: new Date().toISOString(),
+      group_name: formData.group_name || null,
+      location: formData.location || null,
+      notes: formData.notes || null,
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("form_submissions")
+      .update(updateData)
+      .eq("id", formId)
+      .select()
       .single()
 
-    if (!tableExists) {
-      console.warn("Notifications table does not exist, skipping notification creation")
-      return
+    if (error) {
+      console.error("Error updating form by program officer:", error)
+      return { success: false, error: `Failed to update form: ${error.message}` }
     }
 
-    const { error } = await supabaseAdmin.from("notifications").insert({
-      user_id: userId,
-      title: title,
-      message: message,
-      type: type,
-      form_id: formId,
-      read: false,
-    })
+    console.log("Form updated successfully by program officer")
+    revalidatePath("/program-officer/forms")
+    return { success: true, data }
+  } catch (error) {
+    console.error("Unexpected error in updateFormByProgramOfficer:", error)
+    return { success: false, error: "An unexpected error occurred while updating form" }
+  }
+}
+
+// Get form statistics
+export async function getFormStatistics(branchId: string) {
+  try {
+    if (!branchId) {
+      return { success: false, error: "Branch ID is required" }
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("form_submissions")
+      .select("form_data, status")
+      .eq("branch_id", branchId)
 
     if (error) {
-      console.error("Error creating notification:", error)
-      throw error
+      return { success: false, error: `Failed to fetch statistics: ${error.message}` }
     }
 
-    console.log("Notification created successfully for user:", userId)
+    const forms = data || []
+
+    const statistics = {
+      total_forms: forms.length,
+      submitted_forms: forms.filter((f) => f.status === "submitted").length,
+      approved_forms: forms.filter((f) => f.status === "approved").length,
+      draft_forms: forms.filter((f) => f.status === "draft").length,
+      avg_members:
+        forms.length > 0
+          ? Math.round(forms.reduce((sum, f) => sum + (f.form_data?.members_at_end || 0), 0) / forms.length)
+          : 0,
+      total_loan_applied: forms.reduce((sum, f) => sum + (f.form_data?.loan_amount_applied || 0), 0),
+      total_loan_approved: forms.reduce((sum, f) => sum + (f.form_data?.loan_amount_approved || 0), 0),
+      total_groups: forms.reduce((sum, f) => sum + (f.form_data?.number_of_groups || 0), 0),
+    }
+
+    return { success: true, data: statistics }
   } catch (error) {
-    console.error("Error in createNotification function:", error)
-    throw error
+    return { success: false, error: "An unexpected error occurred while fetching statistics" }
+  }
+}
+
+// Mark form as read function for assistance program officer
+export async function markFormAsRead(formId: string, officerId: string) {
+  try {
+    console.log("[v0] Marking form as read:", formId, "by officer:", officerId)
+
+    if (!formId || !officerId) {
+      return { success: false, error: "Form ID and Officer ID are required" }
+    }
+
+    // Update the form with reviewed flag set to true
+    const { data, error } = await supabaseAdmin
+      .from("form_submissions")
+      .update({
+        reviewed: true,
+        reviewed_by_assistance: officerId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", formId)
+      .select()
+      .single()
+
+    if (error) {
+      console.error("[v0] Error marking form as read:", error)
+      return { success: false, error: `Failed to mark form as read: ${error.message}` }
+    }
+
+    console.log("[v0] Form marked as read successfully, reviewed:", data.reviewed)
+    return { success: true, data }
+  } catch (error) {
+    console.error("[v0] Unexpected error in markFormAsRead:", error)
+    return { success: false, error: "An unexpected error occurred while marking form as read" }
   }
 }

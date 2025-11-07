@@ -1,102 +1,97 @@
 "use server"
 
 import { supabaseAdmin } from "@/lib/supabase-admin"
-import { checkAdminRole } from "./admin-actions"
 
-// Generate branch-specific CSV template with password column
-export async function generateBranchCSVTemplate(adminId: string, branchId: string) {
-  try {
-    // Verify admin role
-    const adminCheck = await checkAdminRole(adminId)
-    if (adminCheck.error || !adminCheck.isAdmin) {
-      return { error: "Unauthorized: Admin access required" }
-    }
+export interface Branch {
+  id: string
+  name: string
+  location?: string
+  manager_id?: string
+  created_at: string
+  updated_at: string
+}
 
-    // Get branch details
-    const { data: branch, error: branchError } = await supabaseAdmin
-      .from("branches")
-      .select("name")
-      .eq("id", branchId)
-      .single()
+export interface BranchActionResult {
+  success: boolean
+  data?: any
+  error?: string
+}
 
-    if (branchError || !branch) {
-      return { error: "Branch not found" }
-    }
-
-    // Create simple CSV template with password column
-    const csvContent = [
-      "full_name,email,role,password,phone",
-      "John Doe,john.doe@example.com,branch_manager,SecurePass123,+255123456789",
-      "Jane Smith,jane.smith@example.com,program_officer,StrongPass456,+255987654321",
-      "Bob Johnson,bob.johnson@example.com,branch_report_officer,,+255555555555",
-    ].join("\n")
-
-    const timestamp = new Date().toISOString().split("T")[0]
-    const filename = `${branch.name.replace(/\s+/g, "_")}_users_template_${timestamp}.csv`
-
-    return {
-      success: true,
-      csvContent,
-      filename,
-      branchName: branch.name,
-    }
-  } catch (error) {
-    console.error("Generate branch CSV template error:", error)
-    return { error: "Failed to generate CSV template" }
+function handleError(error: any, operation: string): BranchActionResult {
+  console.error(`${operation} error:`, error)
+  return {
+    success: false,
+    error: error?.message || `Failed to ${operation.toLowerCase()}`,
   }
 }
 
-// Create a new branch
-export async function createBranch(adminId: string, branchName: string) {
+export async function getAllBranches(): Promise<BranchActionResult> {
   try {
-    // Verify admin role
-    const adminCheck = await checkAdminRole(adminId)
-    if (adminCheck.error || !adminCheck.isAdmin) {
-      return { error: "Unauthorized: Admin access required" }
+    console.log("Fetching all branches...")
+
+    const { data, error } = await supabaseAdmin.from("branches").select("*").order("name", { ascending: true })
+
+    if (error) {
+      return handleError(error, "Get all branches")
     }
 
-    // Create branch with minimal required fields
+    console.log(`Successfully fetched ${data?.length || 0} branches`)
+    return {
+      success: true,
+      data: data || [],
+    }
+  } catch (error) {
+    return handleError(error, "Get all branches")
+  }
+}
+
+export async function createBranch(branchData: {
+  name: string
+  location?: string
+  manager_id?: string
+}): Promise<BranchActionResult> {
+  try {
+    console.log("Creating new branch:", branchData.name)
+
     const { data, error } = await supabaseAdmin
       .from("branches")
       .insert({
-        name: branchName,
-        address: "",
-        city: "",
-        state: "",
-        postal_code: "",
-        phone: "",
-        email: "",
-        manager_name: "",
-        status: "active",
+        name: branchData.name,
+        location: branchData.location,
+        manager_id: branchData.manager_id,
       })
       .select()
       .single()
 
     if (error) {
-      return { error: error.message }
+      return handleError(error, "Create branch")
     }
 
-    return { branch: data, success: true }
+    console.log("Branch created successfully:", data.id)
+    return {
+      success: true,
+      data: data,
+    }
   } catch (error) {
-    console.error("Create branch error:", error)
-    return { error: "Failed to create branch" }
+    return handleError(error, "Create branch")
   }
 }
 
-// Update branch
-export async function updateBranch(adminId: string, branchId: string, branchName: string) {
+export async function updateBranch(
+  branchId: string,
+  branchData: {
+    name?: string
+    location?: string
+    manager_id?: string
+  },
+): Promise<BranchActionResult> {
   try {
-    // Verify admin role
-    const adminCheck = await checkAdminRole(adminId)
-    if (adminCheck.error || !adminCheck.isAdmin) {
-      return { error: "Unauthorized: Admin access required" }
-    }
+    console.log("Updating branch:", branchId)
 
-    // Update branch name
     const { data, error } = await supabaseAdmin
       .from("branches")
       .update({
-        name: branchName,
+        ...branchData,
         updated_at: new Date().toISOString(),
       })
       .eq("id", branchId)
@@ -104,35 +99,55 @@ export async function updateBranch(adminId: string, branchId: string, branchName
       .single()
 
     if (error) {
-      return { error: error.message }
+      return handleError(error, "Update branch")
     }
 
-    return { branch: data, success: true }
+    console.log("Branch updated successfully:", data.id)
+    return {
+      success: true,
+      data: data,
+    }
   } catch (error) {
-    console.error("Update branch error:", error)
-    return { error: "Failed to update branch" }
+    return handleError(error, "Update branch")
   }
 }
 
-// Delete branch
-export async function deleteBranch(adminId: string, branchId: string) {
+export async function deleteBranch(branchId: string): Promise<BranchActionResult> {
   try {
-    // Verify admin role
-    const adminCheck = await checkAdminRole(adminId)
-    if (adminCheck.error || !adminCheck.isAdmin) {
-      return { error: "Unauthorized: Admin access required" }
+    console.log("Deleting branch:", branchId)
+
+    const { error } = await supabaseAdmin.from("branches").delete().eq("id", branchId)
+
+    if (error) {
+      return handleError(error, "Delete branch")
     }
 
-    // Delete branch
-    const { error: branchError } = await supabaseAdmin.from("branches").delete().eq("id", branchId)
-
-    if (branchError) {
-      return { error: branchError.message }
+    console.log("Branch deleted successfully:", branchId)
+    return {
+      success: true,
+      data: { message: "Branch deleted successfully" },
     }
-
-    return { success: true }
   } catch (error) {
-    console.error("Delete branch error:", error)
-    return { error: "Failed to delete branch" }
+    return handleError(error, "Delete branch")
+  }
+}
+
+export async function getBranchById(branchId: string): Promise<BranchActionResult> {
+  try {
+    console.log("Fetching branch by ID:", branchId)
+
+    const { data, error } = await supabaseAdmin.from("branches").select("*").eq("id", branchId).single()
+
+    if (error) {
+      return handleError(error, "Get branch by ID")
+    }
+
+    console.log("Branch fetched successfully")
+    return {
+      success: true,
+      data: data,
+    }
+  } catch (error) {
+    return handleError(error, "Get branch by ID")
   }
 }

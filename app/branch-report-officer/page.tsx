@@ -50,6 +50,7 @@ export default function BranchReportOfficerPage() {
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
   const [forms, setForms] = useState<FormSubmission[]>([])
   const [showRecentForms, setShowRecentForms] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
@@ -328,31 +329,64 @@ export default function BranchReportOfficerPage() {
       {/* Sidebar */}
       <div
         className={`
-          fixed inset-y-0 left-0 z-50 w-16 transition-transform duration-300 lg:relative lg:translate-x-0
+          fixed inset-y-0 left-0 z-50 transition-all duration-300 ease-in-out lg:relative lg:translate-x-0
+          ${isCollapsed ? "w-16" : "w-64"}
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          shadow-lg lg:shadow-none
         `}
         style={{ backgroundColor: "#009edb" }}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center justify-center h-16">
-            <div className="bg-white p-2 rounded-lg">
-              <PieChart className="h-6 w-6" style={{ color: "#009edb" }} />
+          {/* Header - Expanded State */}
+          {!isCollapsed && (
+            <div className="flex items-center justify-between h-16 px-4">
+              <div className="flex items-center gap-2">
+                <div className="bg-white p-2 rounded-lg">
+                  <PieChart className="h-6 w-6" style={{ color: "#009edb" }} />
+                </div>
+                <span className="font-bold text-white">HIH Report</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="hidden lg:flex text-white hover:bg-white hover:bg-opacity-20"
+              >
+                <Menu className="h-4 w-4" />
+              </Button>
             </div>
-          </div>
+          )}
+
+          {/* Header - Collapsed State */}
+          {isCollapsed && (
+            <div className="flex flex-col items-center pt-4 pb-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="hidden lg:flex text-white hover:bg-white hover:bg-opacity-20 mb-2"
+              >
+                <Menu className="h-4 w-4" />
+              </Button>
+              <div className="bg-white p-2 rounded-lg">
+                <PieChart className="h-6 w-6" style={{ color: "#009edb" }} />
+              </div>
+            </div>
+          )}
 
           {/* Navigation */}
-          <nav className="flex-1 p-2 space-y-1">
+          <nav className={`flex-1 p-2 space-y-1 ${isCollapsed ? "pt-2" : ""}`}>
             {navigationItems.map((item, index) => (
               <Link
                 key={index}
                 href={item.href}
-                className={`flex items-center justify-center w-full p-3 rounded-lg text-white transition-colors ${
+                className={`flex items-center gap-3 w-full p-3 rounded-lg text-white transition-colors ${
                   item.active ? "bg-white bg-opacity-20" : "hover:bg-white hover:bg-opacity-10"
-                }`}
-                title={item.label}
+                } ${isCollapsed ? "justify-center" : ""}`}
+                title={isCollapsed ? item.label : undefined}
               >
-                <item.icon className="h-5 w-5" />
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {!isCollapsed && <span className="font-medium">{item.label}</span>}
               </Link>
             ))}
           </nav>
@@ -361,17 +395,20 @@ export default function BranchReportOfficerPage() {
           <div className="p-2">
             <button
               onClick={handleSignOut}
-              className="flex items-center justify-center w-full p-3 rounded-lg text-white hover:bg-white hover:bg-opacity-10 transition-colors"
-              title="Sign Out"
+              className={`flex items-center gap-3 w-full p-3 rounded-lg text-white hover:bg-white hover:bg-opacity-10 transition-colors ${
+                isCollapsed ? "justify-center" : ""
+              }`}
+              title={isCollapsed ? "Sign Out" : undefined}
             >
-              <LogOut className="h-5 w-5" />
+              <LogOut className="h-5 w-5 flex-shrink-0" />
+              {!isCollapsed && <span className="font-medium">Sign Out</span>}
             </button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden relative">
         {/* Mobile Header */}
         <div className="flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden">
           <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>

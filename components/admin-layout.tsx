@@ -68,7 +68,24 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         `}
       >
         {/* Header */}
-        <div className="flex h-16 items-center justify-between border-b px-4">
+        <div
+          className={`border-b ${isCollapsed ? "px-2 py-4 space-y-3" : "px-4 py-4 flex items-center justify-between"}`}
+        >
+          {/* Hamburger button - positioned above logo when collapsed, top-right when expanded */}
+          {isCollapsed && (
+            <div className="flex justify-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="p-2 hover:bg-gray-100 w-10 h-10"
+              >
+                <span className="material-icons text-gray-600 text-lg">menu</span>
+              </Button>
+            </div>
+          )}
+
+          {/* Logo and branding */}
           {!isCollapsed && (
             <div className="flex items-center gap-2">
               <div className="rounded-lg p-2" style={{ backgroundColor: "#009edb" }}>
@@ -77,25 +94,35 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <span className="font-bold text-gray-900">HIH Admin</span>
             </div>
           )}
+
           {isCollapsed && (
-            <div className="flex w-full justify-center">
+            <div className="flex justify-center">
               <div className="rounded-lg p-2" style={{ backgroundColor: "#009edb" }}>
                 <span className="material-icons text-white text-lg">admin_panel_settings</span>
               </div>
             </div>
           )}
-          <Button variant="ghost" size="sm" onClick={() => setIsCollapsed(!isCollapsed)} className="hidden lg:flex">
-            <span className="material-icons text-gray-600">
-              {isCollapsed ? "keyboard_arrow_right" : "keyboard_arrow_left"}
-            </span>
-          </Button>
+
+          {/* Hamburger button for expanded state */}
+          {!isCollapsed && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="p-2 hover:bg-gray-100 w-10 h-10"
+            >
+              <span className="material-icons text-gray-600 text-lg">menu_open</span>
+            </Button>
+          )}
+
+          {/* Mobile close button */}
           <Button variant="ghost" size="sm" onClick={() => setIsMobileOpen(false)} className="lg:hidden">
             <X className="h-4 w-4" />
           </Button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-1 p-2">
+        <nav className={`flex-1 ${isCollapsed ? "px-2 py-4 space-y-2" : "px-2 py-2 space-y-1"}`}>
           {navigationItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href))
             return (
@@ -103,9 +130,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 key={item.name}
                 href={item.href}
                 className={`
-                  flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors
+                  flex items-center rounded-lg text-sm font-medium transition-colors
                   ${isActive ? "text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}
-                  ${isCollapsed ? "justify-center" : ""}
+                  ${isCollapsed ? "justify-center p-3 w-12 h-12" : "gap-3 px-3 py-2"}
                 `}
                 style={isActive ? { backgroundColor: "#009edb" } : {}}
                 title={isCollapsed ? item.name : undefined}
@@ -118,13 +145,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         {/* Footer */}
-        <div className="border-t p-2">
+        <div className={`border-t ${isCollapsed ? "px-2 py-4" : "px-2 py-2"}`}>
           <Button
             variant="ghost"
             onClick={handleSignOut}
             className={`
-              w-full justify-start gap-3 text-gray-700 hover:bg-gray-100 hover:text-gray-900
-              ${isCollapsed ? "justify-center px-3" : ""}
+              text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors
+              ${isCollapsed ? "w-12 h-12 p-3 justify-center" : "w-full justify-start gap-3 px-3 py-2"}
             `}
             title={isCollapsed ? "Sign Out" : undefined}
           >
