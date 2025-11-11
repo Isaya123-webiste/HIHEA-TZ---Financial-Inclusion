@@ -143,6 +143,7 @@ export async function getFormsByUser(userId: string) {
         location: item.location || item.form_data?.location || "",
         title: item.title || item.form_data?.title || "Form Submission",
         creator_name: "Branch Report Officer",
+        reviewed: false, // Set reviewed to false by default until is_read column is added
         ...formFields,
       }
     })
@@ -204,6 +205,7 @@ export async function getFormsByBranch(branchId: string) {
     }
 
     const allFormData = [...(formData || []), ...additionalForms]
+
     const userIds = [...new Set(allFormData.map((form: any) => form.user_id).filter(Boolean))]
     let profilesMap: Record<string, any> = {}
 
@@ -225,6 +227,8 @@ export async function getFormsByBranch(branchId: string) {
       const userProfile = profilesMap[item.user_id]
       const formFields = extractFormFields(item.form_data)
 
+      const isReviewed = !!(item.reviewed_at || item.reviewed_by)
+
       return {
         id: item.id,
         user_id: item.user_id,
@@ -243,6 +247,7 @@ export async function getFormsByBranch(branchId: string) {
         location: item.location || item.form_data?.location || "",
         title: item.title || item.form_data?.title || "Form Submission",
         creator_name: userProfile?.full_name || "Branch Report Officer",
+        reviewed: isReviewed, // Now properly checks if form has been reviewed
         ...formFields,
         profiles: userProfile
           ? {
@@ -308,7 +313,14 @@ export async function getFormById(formId: string, userId: string) {
       location: data.location || data.form_data?.location || "",
       title: data.title || data.form_data?.title || "Form Submission",
       creator_name: "Branch Report Officer",
+      reviewed: false, // Set reviewed to false by default until is_read column is added
       ...formFields,
+      profiles: data.profiles
+        ? {
+            full_name: data.profiles.full_name,
+            email: data.profiles.email,
+          }
+        : undefined,
     }
 
     console.log("Successfully fetched form by ID")
@@ -586,7 +598,14 @@ export async function searchForms(
         location: item.location || item.form_data?.location || "",
         title: item.title || item.form_data?.title || "Form Submission",
         creator_name: "Branch Report Officer",
+        reviewed: false, // Set reviewed to false by default until is_read column is added
         ...formFields,
+        profiles: item.profiles
+          ? {
+              full_name: item.profiles.full_name,
+              email: item.profiles.email,
+            }
+          : undefined,
       }
     })
 
@@ -792,24 +811,25 @@ export async function markFormAsRead(formId: string, officerId: string) {
       return { success: false, error: "Form ID and Officer ID are required" }
     }
 
-    // Update the form with reviewed flag set to true
+    // For now, just update reviewed_at and reviewed_by until is_read column is added
     const { data, error } = await supabaseAdmin
       .from("form_submissions")
       .update({
-        reviewed: true,
-        reviewed_by_assistance: officerId,
+        reviewed_by: officerId,
+        reviewed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq("id", formId)
       .select()
-      .single()
 
     if (error) {
       console.error("[v0] Error marking form as read:", error)
-      return { success: false, error: `Failed to mark form as read: ${error.message}` }
+      return { success: false, error: `Failed to mark as read: ${error.message}` }
     }
 
-    console.log("[v0] Form marked as read successfully, reviewed:", data.reviewed)
+    console.log("[v0] Form marked as read successfully:", data)
+    revalidatePath("/assistance-program-officer/forms")
+    revalidatePath("/program-officer/forms")
     return { success: true, data }
   } catch (error) {
     console.error("[v0] Unexpected error in markFormAsRead:", error)
