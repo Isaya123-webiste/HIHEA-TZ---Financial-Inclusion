@@ -45,53 +45,71 @@ export async function getAllBranches(): Promise<BranchActionResult> {
   }
 }
 
-export async function createBranch(branchData: {
-  name: string
-  location?: string
-  manager_id?: string
-}): Promise<BranchActionResult> {
+export async function createBranch(
+  userId: string,
+  branchName: string,
+): Promise<{
+  success: boolean
+  branch?: any
+  error?: string
+}> {
   try {
-    console.log("Creating new branch:", branchData.name)
+    console.log("[v0] Creating new branch:", branchName)
 
     const { data, error } = await supabaseAdmin
       .from("branches")
       .insert({
-        name: branchData.name,
-        location: branchData.location,
-        manager_id: branchData.manager_id,
+        name: branchName,
+        status: "active",
+        address: "",
+        city: "",
+        state: "",
+        postal_code: "",
+        phone: "",
+        email: "",
+        manager_name: "",
       })
       .select()
       .single()
 
     if (error) {
-      return handleError(error, "Create branch")
+      console.error("[v0] Create branch error:", error)
+      return {
+        success: false,
+        error: error.message || "Failed to create branch",
+      }
     }
 
-    console.log("Branch created successfully:", data.id)
+    console.log("[v0] Branch created successfully:", data.id)
     return {
       success: true,
-      data: data,
+      branch: data,
     }
-  } catch (error) {
-    return handleError(error, "Create branch")
+  } catch (error: any) {
+    console.error("[v0] Create branch error:", error)
+    return {
+      success: false,
+      error: error?.message || "Failed to create branch",
+    }
   }
 }
 
 export async function updateBranch(
+  userId: string,
   branchId: string,
-  branchData: {
-    name?: string
-    location?: string
-    manager_id?: string
-  },
-): Promise<BranchActionResult> {
+  branchName: string,
+): Promise<{
+  success: boolean
+  branch?: any
+  error?: string
+}> {
   try {
-    console.log("Updating branch:", branchId)
+    console.log("[v0] Updating branch:", branchId)
 
     const { data, error } = await supabaseAdmin
       .from("branches")
       .update({
-        ...branchData,
+        name: branchName,
         updated_at: new Date().toISOString(),
       })
       .eq("id", branchId)
@@ -99,36 +117,57 @@ export async function updateBranch(
       .single()
 
     if (error) {
-      return handleError(error, "Update branch")
+      console.error("[v0] Update branch error:", error)
+      return {
+        success: false,
+        error: error.message || "Failed to update branch",
+      }
     }
 
-    console.log("Branch updated successfully:", data.id)
+    console.log("[v0] Branch updated successfully:", data.id)
     return {
       success: true,
-      data: data,
+      branch: data,
     }
-  } catch (error) {
-    return handleError(error, "Update branch")
+  } catch (error: any) {
+    console.error("[v0] Update branch error:", error)
+    return {
+      success: false,
+      error: error?.message || "Failed to update branch",
+    }
   }
 }
 
-export async function deleteBranch(branchId: string): Promise<BranchActionResult> {
+export async function deleteBranch(
+  userId: string,
+  branchId: string,
+): Promise<{
+  success: boolean
+  error?: string
+}> {
   try {
-    console.log("Deleting branch:", branchId)
+    console.log("[v0] Deleting branch:", branchId)
 
     const { error } = await supabaseAdmin.from("branches").delete().eq("id", branchId)
 
     if (error) {
-      return handleError(error, "Delete branch")
+      console.error("[v0] Delete branch error:", error)
+      return {
+        success: false,
+        error: error.message || "Failed to delete branch",
+      }
     }
 
-    console.log("Branch deleted successfully:", branchId)
+    console.log("[v0] Branch deleted successfully:", branchId)
     return {
       success: true,
-      data: { message: "Branch deleted successfully" },
     }
-  } catch (error) {
-    return handleError(error, "Delete branch")
+  } catch (error: any) {
+    console.error("[v0] Delete branch error:", error)
+    return {
+      success: false,
+      error: error?.message || "Failed to delete branch",
+    }
   }
 }
 

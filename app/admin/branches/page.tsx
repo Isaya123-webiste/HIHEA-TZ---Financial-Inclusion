@@ -106,10 +106,15 @@ export default function BranchesPage() {
 
   const handleCreateBranch = async (branchName: string) => {
     if (!currentUser) {
+      showError("Not authenticated")
       return { error: "Not authenticated" }
     }
 
+    console.log("[v0] handleCreateBranch called with:", branchName)
+
     const result = await createBranch(currentUser.id, branchName)
+
+    console.log("[v0] createBranch result:", result)
 
     if (result.success && result.branch) {
       setBranches([result.branch, ...branches])
@@ -117,11 +122,13 @@ export default function BranchesPage() {
       return { success: true }
     }
 
+    showError(result.error || "Failed to create branch")
     return { error: result.error }
   }
 
   const handleUpdateBranch = async (branchName: string) => {
     if (!currentUser || !editingBranch) {
+      showError("Not authenticated or no branch selected")
       return { error: "Not authenticated or no branch selected" }
     }
 
@@ -134,6 +141,7 @@ export default function BranchesPage() {
       return { success: true }
     }
 
+    showError(result.error || "Failed to update branch")
     return { error: result.error }
   }
 

@@ -6,7 +6,6 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { AlertCircle, CheckCircle } from "lucide-react"
 
 interface BranchModalProps {
   isOpen: boolean
@@ -44,21 +43,28 @@ export default function BranchModal({ isOpen, onClose, onSubmit, mode, initialVa
       return
     }
 
+    console.log("[v0] BranchModal handleSubmit called with:", branchName.trim())
+
     try {
       const result = await onSubmit(branchName.trim())
 
+      console.log("[v0] onSubmit result:", result)
+
       if (result.success) {
-        setSuccess(mode === "create" ? "Branch created successfully!" : "Branch updated successfully!")
         setBranchName("")
         setTimeout(() => {
           onClose()
-        }, 1500)
+        }, 500)
       } else {
-        setError(result.error || `Failed to ${mode} branch`)
+        setTimeout(() => {
+          onClose()
+        }, 1000)
       }
     } catch (error) {
-      console.error(`${mode} branch error:`, error)
-      setError("An unexpected error occurred")
+      console.error(`[v0] ${mode} branch error:`, error)
+      setTimeout(() => {
+        onClose()
+      }, 1000)
     } finally {
       setLoading(false)
     }
@@ -75,20 +81,6 @@ export default function BranchModal({ isOpen, onClose, onSubmit, mode, initialVa
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 text-red-700">
-              <AlertCircle className="h-4 w-4" />
-              <span className="text-sm">{error}</span>
-            </div>
-          )}
-
-          {success && (
-            <div className="flex items-center gap-2 rounded-md bg-green-50 p-3 text-green-700">
-              <CheckCircle className="h-4 w-4" />
-              <span className="text-sm">{success}</span>
-            </div>
-          )}
-
           <div className="space-y-2">
             <label htmlFor="branchName" className="text-sm font-medium">
               Branch Name
@@ -105,7 +97,13 @@ export default function BranchModal({ isOpen, onClose, onSubmit, mode, initialVa
           </div>
 
           <div className="flex gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading} className="flex-1">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={loading}
+              className="flex-1 bg-transparent"
+            >
               Cancel
             </Button>
             <Button type="submit" className="flex-1 bg-red-600 hover:bg-red-700" disabled={loading}>

@@ -63,19 +63,16 @@ BEGIN
                 ELSE loan_uses || '; ' || (p_form_data->>'loan_uses')
             END,
             
-            trust_erosion = CASE 
-                WHEN trust_erosion IS NULL OR trust_erosion = '' THEN p_form_data->>'trust_erosion'
-                WHEN p_form_data->>'trust_erosion' IS NULL OR p_form_data->>'trust_erosion' = '' THEN trust_erosion
-                WHEN trust_erosion = p_form_data->>'trust_erosion' THEN trust_erosion
-                ELSE trust_erosion || '; ' || (p_form_data->>'trust_erosion')
-            END,
+            -- Changed trust_erosion and documentation_delay to sum numeric values instead of concatenating
+            trust_erosion = (
+                COALESCE(NULLIF(trust_erosion, '')::INTEGER, 0) + 
+                COALESCE(NULLIF(p_form_data->>'trust_erosion', '')::INTEGER, 0)
+            )::TEXT,
             
-            documentation_delay = CASE 
-                WHEN documentation_delay IS NULL OR documentation_delay = '' THEN p_form_data->>'documentation_delay'
-                WHEN p_form_data->>'documentation_delay' IS NULL OR p_form_data->>'documentation_delay' = '' THEN documentation_delay
-                WHEN documentation_delay = p_form_data->>'documentation_delay' THEN documentation_delay
-                ELSE documentation_delay || '; ' || (p_form_data->>'documentation_delay')
-            END,
+            documentation_delay = (
+                COALESCE(NULLIF(documentation_delay, '')::INTEGER, 0) + 
+                COALESCE(NULLIF(p_form_data->>'documentation_delay', '')::INTEGER, 0)
+            )::TEXT,
             
             loan_cost_high = CASE 
                 WHEN loan_cost_high IS NULL OR loan_cost_high = '' THEN p_form_data->>'loan_cost_high'
@@ -159,15 +156,21 @@ BEGIN
             COALESCE((p_form_data->>'loan_delinquency')::NUMERIC, 0),
             COALESCE((p_form_data->>'loan_dropout')::INTEGER, 0),
             COALESCE((p_form_data->>'money_fraud')::INTEGER, 0),
-            p_form_data->>'trust_erosion',
-            p_form_data->>'documentation_delay',
+            (
+                COALESCE(NULLIF((SELECT trust_erosion FROM branch_reports WHERE id = existing_report_id), '')::INTEGER, 0) + 
+                COALESCE(NULLIF(p_form_data->>'trust_erosion', '')::INTEGER, 0)
+            )::TEXT,
+            (
+                COALESCE(NULLIF((SELECT documentation_delay FROM branch_reports WHERE id = existing_report_id), '')::INTEGER, 0) + 
+                COALESCE(NULLIF(p_form_data->>'documentation_delay', '')::INTEGER, 0)
+            )::TEXT,
             p_form_data->>'loan_cost_high',
             COALESCE((p_form_data->>'number_of_groups')::INTEGER, 0),
             COALESCE((p_form_data->>'members_at_start')::INTEGER, 0),
             COALESCE((p_form_data->>'members_at_end')::INTEGER, 0),
             COALESCE((p_form_data->>'bros_at_start')::INTEGER, 0),
             COALESCE((p_form_data->>'bros_at_end')::INTEGER, 0),
-            form_id,
+            (p_form_data->>'id')::UUID,
             1,
             'Initial branch report created from form ' || (p_form_data->>'group_name') || '.',
             ARRAY[]::text[],

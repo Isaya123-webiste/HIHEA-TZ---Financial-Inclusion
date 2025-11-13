@@ -68,12 +68,16 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
 
     // Text fields to concatenate
     const textFields = {
-      credit_sources: formData.credit_sources || "",
       loan_uses: formData.loan_uses || "",
-      trust_erosion: formData.trust_erosion || "",
-      documentation_delay: formData.documentation_delay || "",
       loan_cost_high: formData.loan_cost_high || "",
       explain_barriers: formData.explain_barriers || "",
+    }
+
+    // Additional numeric fields to sum
+    const additionalNumericFields = {
+      credit_sources: parseInt(formData.credit_sources, 0),
+      trust_erosion: parseInt(formData.trust_erosion, 0),
+      documentation_delay: parseInt(formData.documentation_delay, 0),
     }
 
     if (existingReport) {
@@ -90,6 +94,14 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
         const currentValue = existingReport[field] || 0
         const newValue = numericData[field as keyof typeof numericData]
         updates[field] = currentValue + newValue
+      })
+
+      // Sum additional numeric fields
+      Object.keys(additionalNumericFields).forEach((field) => {
+        const currentValue =
+          typeof existingReport[field] === "string" ? parseInt(existingReport[field], 0) : existingReport[field] || 0
+        const newValue = additionalNumericFields[field as keyof typeof additionalNumericFields]
+        updates[field] = (currentValue + newValue).toString()
       })
 
       // Concatenate text fields with semicolon separator
@@ -131,9 +143,16 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
         ...textFields,
       }
 
-      console.log("Creating new branch report with:", newReport)
+      const reportWithStringFields = {
+        ...newReport,
+        credit_sources: additionalNumericFields.credit_sources.toString(),
+        trust_erosion: additionalNumericFields.trust_erosion.toString(),
+        documentation_delay: additionalNumericFields.documentation_delay.toString(),
+      }
 
-      const { error: insertError } = await supabaseAdmin.from("branch_reports").insert(newReport)
+      console.log("Creating new branch report with:", reportWithStringFields)
+
+      const { error: insertError } = await supabaseAdmin.from("branch_reports").insert(reportWithStringFields)
 
       if (insertError) {
         console.error("Error creating branch report:", insertError)

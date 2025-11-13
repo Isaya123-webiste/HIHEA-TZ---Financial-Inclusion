@@ -836,3 +836,38 @@ export async function markFormAsRead(formId: string, officerId: string) {
     return { success: false, error: "An unexpected error occurred while marking form as read" }
   }
 }
+
+// Mark form as read function for business development officer
+export async function markFormAsReadForBusinessDevelopment(formId: string, officerId: string) {
+  try {
+    console.log("[v0] Marking form as read for business development:", formId, "by officer:", officerId)
+
+    if (!formId || !officerId) {
+      return { success: false, error: "Form ID and Officer ID are required" }
+    }
+
+    // For now, just update reviewed_at and reviewed_by until is_read column is added
+    const { data, error } = await supabaseAdmin
+      .from("form_submissions")
+      .update({
+        reviewed_by: officerId,
+        reviewed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", formId)
+      .select()
+
+    if (error) {
+      console.error("[v0] Error marking form as read for business development:", error)
+      return { success: false, error: `Failed to mark as read: ${error.message}` }
+    }
+
+    console.log("[v0] Form marked as read successfully for business development:", data)
+    revalidatePath("/business-development-officer/forms")
+    revalidatePath("/program-officer/forms")
+    return { success: true, data }
+  } catch (error) {
+    console.error("[v0] Unexpected error in markFormAsReadForBusinessDevelopment:", error)
+    return { success: false, error: "An unexpected error occurred while marking form as read for business development" }
+  }
+}

@@ -61,6 +61,8 @@ export default function UsersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showEditPassword, setShowEditPassword] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null)
 
   // Form states
   const [editForm, setEditForm] = useState({
@@ -271,16 +273,19 @@ export default function UsersPage() {
   }
 
   const handleDeleteUser = async (user: UserProfile) => {
-    if (!confirm(`Are you sure you want to delete ${user.full_name}? This action cannot be undone.`)) {
-      return
-    }
+    setUserToDelete(user)
+    setIsDeleteDialogOpen(true)
+  }
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return
 
     try {
-      const result = await deleteUser(user.id)
+      const result = await deleteUser(userToDelete.id)
 
       if (result.success) {
         // Remove user from local state immediately
-        setUsers((prevUsers) => prevUsers.filter((u) => u.id !== user.id))
+        setUsers((prevUsers) => prevUsers.filter((u) => u.id !== userToDelete.id))
 
         toast({
           title: "Success",
@@ -300,6 +305,9 @@ export default function UsersPage() {
         description: "An unexpected error occurred while deleting the user",
         variant: "destructive",
       })
+    } finally {
+      setIsDeleteDialogOpen(false)
+      setUserToDelete(null)
     }
   }
 
@@ -439,6 +447,9 @@ export default function UsersPage() {
   }
 
   const formatRole = (role: string) => {
+    if (role === "assistance_program_officer") {
+      return "Business Development Officer"
+    }
     return role
       .split("_")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -545,7 +556,7 @@ export default function UsersPage() {
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="branch_manager">Branch Manager</SelectItem>
                     <SelectItem value="program_officer">Program Officer</SelectItem>
-                    <SelectItem value="assistance_program_officer">Assistance Program Officer</SelectItem>
+                    <SelectItem value="assistance_program_officer">Business Development Officer</SelectItem>
                     <SelectItem value="branch_report_officer">Branch Report Officer</SelectItem>
                   </SelectContent>
                 </Select>
@@ -750,7 +761,7 @@ export default function UsersPage() {
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="branch_manager">Branch Manager</SelectItem>
                   <SelectItem value="program_officer">Program Officer</SelectItem>
-                  <SelectItem value="assistance_program_officer">Assistance Program Officer</SelectItem>
+                  <SelectItem value="assistance_program_officer">Business Development Officer</SelectItem>
                   <SelectItem value="branch_report_officer">Branch Report Officer</SelectItem>
                 </SelectContent>
               </Select>
@@ -856,6 +867,25 @@ export default function UsersPage() {
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isSubmitting ? "Updating..." : "Update User"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete User</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{userToDelete?.full_name}</strong>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteUser}>
+              Delete User
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1048,7 +1048,7 @@ export default function AssistanceProgramOfficerFormsPage() {
                           {(form as any).reviewed && (
                             <CheckCircle
                               className="h-5 w-5 text-green-600"
-                              title="Reviewed by Assistance Program Officer"
+                              title="Reviewed by Business Development Officer"
                             />
                           )}
                           {form.status === "approved" && <CheckCircle className="h-5 w-5 text-green-600" />}
