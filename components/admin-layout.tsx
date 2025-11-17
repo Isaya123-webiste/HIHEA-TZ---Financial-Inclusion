@@ -3,17 +3,17 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter, usePathname } from 'next/navigation'
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { LogOut, Menu, X } from "lucide-react"
+import { LogOut, Menu, X } from 'lucide-react'
 import { supabase } from "@/lib/supabase-client"
 
 interface AdminLayoutProps {
   children: React.ReactNode
 }
 
-// Update the navigationItems array to include Users
+// Update the navigationItems array to include Users and Projects
 const navigationItems = [
   {
     name: "Dashboard",
@@ -29,6 +29,11 @@ const navigationItems = [
     name: "Branches",
     href: "/admin/branches",
     icon: "business",
+  },
+  {
+    name: "Projects",
+    href: "/admin/projects",
+    icon: "folder",
   },
 ]
 

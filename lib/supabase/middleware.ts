@@ -25,9 +25,14 @@ export async function updateSession(request: NextRequest) {
     },
   )
 
-  // This prevents the blinking/infinite loop issue
-  // Auth checks should be done in individual pages/layouts
-  await supabase.auth.getUser()
+  try {
+    // This refreshes the session if needed and prevents auth issues
+    await supabase.auth.getUser()
+  } catch (error) {
+    // Ignore session errors - they will be handled by individual pages
+    // This prevents middleware from blocking requests when sessions are invalid
+    console.log("[v0] Middleware: Session refresh error (this is OK):", error)
+  }
 
   return supabaseResponse
 }

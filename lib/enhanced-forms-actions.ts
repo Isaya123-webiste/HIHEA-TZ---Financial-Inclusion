@@ -352,11 +352,14 @@ export async function saveDraftForm(userId: string, formData: any) {
     }
 
     const formId = formData.id
+    const projectId = formData.project_id
     delete formData.id
+    delete formData.project_id
 
     const submissionData = {
       user_id: userId,
       branch_id: userProfile?.branch_id || null,
+      project_id: projectId || null,
       form_type: "branch_report",
       form_data: formData,
       status: "draft" as const,
@@ -428,11 +431,14 @@ export async function submitForm(userId: string, formData: any) {
     }
 
     const formId = formData.id
+    const projectId = formData.project_id
     delete formData.id
+    delete formData.project_id
 
     const submissionData = {
       user_id: userId,
       branch_id: userProfile?.branch_id || null,
+      project_id: projectId || null,
       form_type: "branch_report",
       form_data: formData,
       status: "submitted" as const,

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,27 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import {
-  FileText,
-  Plus,
-  PieChart,
-  LogOut,
-  Menu,
-  BarChart3,
-  AlertCircle,
-  CheckCircle,
-  ArrowLeft,
-  ArrowRight,
-  Save,
-  Send,
-  Search,
-  Edit,
-  Trash2,
-  Filter,
-  RefreshCw,
-  AlertTriangle,
-  MessageSquare,
-} from "lucide-react"
+import ProjectSelectionDialog from "@/components/project-selection-dialog"
+import { FileText, Plus, PieChart, LogOut, Menu, BarChart3, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Save, Send, Search, Edit, Trash2, Filter, RefreshCw, AlertTriangle, MessageSquare } from 'lucide-react'
 import { supabase } from "@/lib/supabase-client"
 import { getUserProfile } from "@/lib/admin-actions"
 import {
@@ -85,6 +66,8 @@ export default function BranchReportOfficerForms() {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
   const [formToDelete, setFormToDelete] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [showProjectSelection, setShowProjectSelection] = useState(false)
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const router = useRouter()
 
   // Define all form fields in sequential order
@@ -453,6 +436,12 @@ export default function BranchReportOfficerForms() {
   }
 
   const handleAddForm = () => {
+    setShowProjectSelection(true)
+  }
+
+  const handleProjectSelected = (projectId: string) => {
+    setSelectedProjectId(projectId)
+    setShowProjectSelection(false)
     setIsFormOpen(true)
     setCurrentFieldIndex(0)
     setFormData({})
@@ -581,6 +570,9 @@ export default function BranchReportOfficerForms() {
       if (editingFormId) {
         dataToSave.id = editingFormId
       }
+      if (selectedProjectId) {
+        dataToSave.project_id = selectedProjectId
+      }
 
       const result = await saveDraftForm(profile.id, dataToSave)
 
@@ -641,6 +633,9 @@ export default function BranchReportOfficerForms() {
       if (editingFormId) {
         dataToSubmit.id = editingFormId
       }
+      if (selectedProjectId) {
+        dataToSubmit.project_id = selectedProjectId
+      }
 
       const result = await submitForm(profile.id, dataToSubmit)
 
@@ -651,6 +646,7 @@ export default function BranchReportOfficerForms() {
         setFormData({})
         setEditingFormId(null)
         setEditingForm(null)
+        setSelectedProjectId(null)
         await loadForms(profile.id)
       } else {
         showMessage(result.error || "Failed to submit form", "error")
@@ -1042,6 +1038,13 @@ export default function BranchReportOfficerForms() {
           )}
         </div>
       </div>
+
+      {/* Project Selection Dialog */}
+      <ProjectSelectionDialog
+        isOpen={showProjectSelection}
+        onClose={() => setShowProjectSelection(false)}
+        onSelectProject={handleProjectSelected}
+      />
 
       {/* Form Dialog */}
       <Dialog open={isFormOpen} onOpenChange={handleCloseForm}>
