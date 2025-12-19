@@ -2,20 +2,23 @@
 
 import { supabaseAdmin } from "./supabase-admin"
 
-export async function aggregateFormToBranchReport(formId: string, branchId: string, formData: any) {
+export async function aggregateFormToBranchReport(formId: string, branchId: string, formData: any, projectId?: string) {
   try {
-    console.log("Aggregating form to branch report:", formId, "for branch:", branchId)
+    console.log("Aggregating form to branch report:", formId, "for branch:", branchId, "project:", projectId)
 
     if (!formId || !branchId || !formData) {
       return { success: false, error: "Missing required parameters for aggregation" }
     }
 
     // Fetch existing branch report
-    const { data: existingReports, error: fetchError } = await supabaseAdmin
-      .from("branch_reports")
-      .select("*")
-      .eq("branch_id", branchId)
-      .limit(1)
+    const query = supabaseAdmin.from("branch_reports").select("*").eq("branch_id", branchId)
+
+    // If projectId is provided, look for a report with that project_id
+    if (projectId) {
+      query.eq("project_id", projectId)
+    }
+
+    const { data: existingReports, error: fetchError } = await query.limit(1)
 
     if (fetchError && fetchError.code !== "PGRST116") {
       console.error("Error fetching branch report:", fetchError)
@@ -131,6 +134,7 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
       // Create new branch report
       const newReport: any = {
         branch_id: branchId,
+        project_id: projectId || null, // Include project_id in new reports
         title: `Branch Report - ${new Date().toISOString().split("T")[0]}`,
         form_type: "branch_report",
         status: "active",
@@ -168,13 +172,19 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
   }
 }
 
-export async function getBranchReportData(branchId: string) {
+export async function getBranchReportData(branchId: string, projectId?: string) {
   try {
     if (!branchId) {
       return { success: false, error: "Branch ID is required" }
     }
 
-    const { data, error } = await supabaseAdmin.from("branch_reports").select("*").eq("branch_id", branchId).single()
+    let query = supabaseAdmin.from("branch_reports").select("*").eq("branch_id", branchId)
+
+    if (projectId) {
+      query = query.eq("project_id", projectId)
+    }
+
+    const { data, error } = await query.single()
 
     if (error && error.code !== "PGRST116") {
       console.error("Error fetching branch report:", error)
@@ -209,9 +219,9 @@ export async function resetBranchReport(branchId: string) {
   }
 }
 
-export async function getAllBranchReports() {
+export async function getAllBranchReports(projectId?: string) {
   try {
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("branch_reports")
       .select(
         `
@@ -220,10 +230,20 @@ export async function getAllBranchReports() {
           id,
           name,
           city
+        ),
+        projects (
+          id,
+          name
         )
       `,
       )
       .order("updated_at", { ascending: false })
+
+    if (projectId) {
+      query = query.eq("project_id", projectId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       console.error("Error fetching all branch reports:", error)

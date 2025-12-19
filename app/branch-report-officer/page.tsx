@@ -119,6 +119,8 @@ export default function BranchReportOfficerPage() {
       setLoading(true)
       setError(null)
 
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
       // Get authenticated user with timeout
       const authPromise = supabase.auth.getUser()
       const timeoutPromise = new Promise((_, reject) =>
@@ -132,7 +134,12 @@ export default function BranchReportOfficerPage() {
 
       if (userError) {
         console.error("Auth error:", userError)
-        if (userError.message?.includes("Invalid JWT")) {
+        if (userError.message?.includes("session") || userError.message?.includes("JWT")) {
+          console.log("[v0] Session error after redirect, retrying...")
+          if (retryCount < 2) {
+            setTimeout(() => setRetryCount((prev) => prev + 1), 1000)
+            return
+          }
           await supabase.auth.signOut()
           router.push("/")
           return

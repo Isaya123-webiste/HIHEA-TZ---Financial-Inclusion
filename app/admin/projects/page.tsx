@@ -5,12 +5,18 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, Edit, Trash2, FolderOpen } from 'lucide-react'
+import { Plus, Search, Edit, Trash2 } from "lucide-react"
 import { getAllProjects, createProject, updateProject, deleteProject } from "@/lib/projects-crud-actions"
 import type { Project } from "@/lib/projects-crud-actions"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import ConfirmationDialog from "@/components/confirmation-dialog"
 import { ToastContainer, useToast } from "@/components/toast"
@@ -30,12 +36,10 @@ export default function ProjectsPage() {
 
   const [createForm, setCreateForm] = useState({
     name: "",
-    description: "",
   })
 
   const [editForm, setEditForm] = useState({
     name: "",
-    description: "",
     status: "active" as "active" | "inactive" | "completed",
   })
 
@@ -47,10 +51,7 @@ export default function ProjectsPage() {
     if (!searchTerm) {
       setFilteredProjects(projects)
     } else {
-      const filtered = projects.filter((project) =>
-        project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
+      const filtered = projects.filter((project) => project.name.toLowerCase().includes(searchTerm.toLowerCase()))
       setFilteredProjects(filtered)
     }
   }, [searchTerm, projects])
@@ -79,13 +80,13 @@ export default function ProjectsPage() {
       return
     }
 
-    const result = await createProject(createForm.name, createForm.description)
+    const result = await createProject(createForm.name)
 
     if (result.success && result.project) {
       setProjects([result.project, ...projects])
       showSuccess(`Project "${createForm.name}" created successfully!`)
       setShowCreateModal(false)
-      setCreateForm({ name: "", description: "" })
+      setCreateForm({ name: "" })
     } else {
       showError(result.error || "Failed to create project")
     }
@@ -96,7 +97,6 @@ export default function ProjectsPage() {
 
     const result = await updateProject(editingProject.id, {
       name: editForm.name,
-      description: editForm.description,
       status: editForm.status,
     })
 
@@ -147,7 +147,6 @@ export default function ProjectsPage() {
     setEditingProject(project)
     setEditForm({
       name: project.name,
-      description: project.description || "",
       status: project.status,
     })
     setShowEditModal(true)
@@ -256,9 +255,6 @@ export default function ProjectsPage() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <CardTitle className="text-lg">{project.name}</CardTitle>
-                  {project.description && (
-                    <p className="text-sm text-muted-foreground mt-1">{project.description}</p>
-                  )}
                 </div>
                 <Badge className={getStatusColor(project.status)}>{project.status}</Badge>
               </div>
@@ -320,16 +316,6 @@ export default function ProjectsPage() {
                 placeholder="Enter project name"
               />
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="create-description">Description (Optional)</Label>
-              <Textarea
-                id="create-description"
-                value={createForm.description}
-                onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-                placeholder="Enter project description"
-                rows={3}
-              />
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateModal(false)}>
@@ -357,16 +343,6 @@ export default function ProjectsPage() {
                 value={editForm.name}
                 onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 placeholder="Enter project name"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={editForm.description}
-                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                placeholder="Enter project description"
-                rows={3}
               />
             </div>
             <div className="grid gap-2">

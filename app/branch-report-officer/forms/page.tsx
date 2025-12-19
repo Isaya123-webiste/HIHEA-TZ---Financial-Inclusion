@@ -1,7 +1,9 @@
 "use client"
 
+import type React from "react"
+
 import { useEffect, useState } from "react"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,7 +15,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import ProjectSelectionDialog from "@/components/project-selection-dialog"
-import { FileText, Plus, PieChart, LogOut, Menu, BarChart3, AlertCircle, CheckCircle, ArrowLeft, ArrowRight, Save, Send, Search, Edit, Trash2, Filter, RefreshCw, AlertTriangle, MessageSquare } from 'lucide-react'
+import {
+  FileText,
+  Plus,
+  PieChart,
+  LogOut,
+  Menu,
+  BarChart3,
+  AlertCircle,
+  CheckCircle,
+  ArrowLeft,
+  ArrowRight,
+  Save,
+  Send,
+  Search,
+  Edit,
+  Trash2,
+  Filter,
+  RefreshCw,
+  AlertTriangle,
+  MessageSquare,
+} from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 import { getUserProfile } from "@/lib/admin-actions"
 import {
@@ -695,12 +717,22 @@ export default function BranchReportOfficerForms() {
     const field = formFields[currentFieldIndex]
     const value = formData[field.name] || ""
 
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" && field.type !== "textarea") {
+        e.preventDefault()
+        if (isCurrentFieldValid()) {
+          handleNext()
+        }
+      }
+    }
+
     switch (field.type) {
       case "text":
         return (
           <Input
             value={value}
             onChange={(e) => handleFieldChange(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder={field.placeholder}
             className="w-full"
           />
@@ -712,6 +744,7 @@ export default function BranchReportOfficerForms() {
             type="number"
             value={value}
             onChange={(e) => handleFieldChange(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder={field.placeholder}
             min="0"
             className="w-full"
@@ -719,7 +752,13 @@ export default function BranchReportOfficerForms() {
         )
       case "date":
         return (
-          <Input type="date" value={value} onChange={(e) => handleFieldChange(e.target.value)} className="w-full" />
+          <Input
+            type="date"
+            value={value}
+            onChange={(e) => handleFieldChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="w-full"
+          />
         )
       case "select":
         return (

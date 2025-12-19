@@ -635,7 +635,7 @@ export async function approveForm(formId: string, programOfficerId: string) {
     // First, fetch the form data before updating
     const { data: formData, error: fetchError } = await supabaseAdmin
       .from("form_submissions")
-      .select("id, branch_id, form_data, status")
+      .select("id, branch_id, form_data, status, project_id")
       .eq("id", formId)
       .single()
 
@@ -672,8 +672,18 @@ export async function approveForm(formId: string, programOfficerId: string) {
 
     // Now aggregate to branch report
     if (formData.branch_id && formData.form_data) {
-      console.log("Starting aggregation to branch report for branch:", formData.branch_id)
-      const aggregationResult = await aggregateFormToBranchReport(formId, formData.branch_id, formData.form_data)
+      console.log(
+        "Starting aggregation to branch report for branch:",
+        formData.branch_id,
+        "project:",
+        formData.project_id,
+      )
+      const aggregationResult = await aggregateFormToBranchReport(
+        formId,
+        formData.branch_id,
+        formData.form_data,
+        formData.project_id || undefined,
+      )
 
       if (!aggregationResult.success) {
         console.error("Error aggregating to branch report:", aggregationResult.error)
