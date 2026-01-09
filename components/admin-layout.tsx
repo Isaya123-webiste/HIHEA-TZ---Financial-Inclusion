@@ -1,19 +1,18 @@
 "use client"
 
 import type React from "react"
-
+import Image from "next/image"
 import { useState, useEffect } from "react"
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { LogOut, Menu, X } from 'lucide-react'
+import { LogOut, Menu, X, ChevronUp, ChevronDown } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 
 interface AdminLayoutProps {
   children: React.ReactNode
 }
 
-// Update the navigationItems array to include Users and Projects
 const navigationItems = [
   {
     name: "Dashboard",
@@ -35,11 +34,23 @@ const navigationItems = [
     href: "/admin/projects",
     icon: "folder",
   },
+  {
+    name: "Data Overview",
+    href: null,
+    icon: "analytics",
+    subItems: [
+      {
+        name: "Weights Configuration",
+        href: "/admin/data-overview/weights",
+      },
+    ],
+  },
 ]
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(true)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [expandedItems, setExpandedItems] = useState<string[]>(["Data Overview"])
   const router = useRouter()
   const pathname = usePathname()
 
@@ -52,7 +63,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     }
   }
 
-  // Close mobile menu when route changes
+  const toggleExpanded = (itemName: string) => {
+    setExpandedItems((prev) =>
+      prev.includes(itemName) ? prev.filter((name) => name !== itemName) : [...prev, itemName],
+    )
+  }
+
   useEffect(() => {
     setIsMobileOpen(false)
   }, [pathname])
@@ -93,8 +109,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           {/* Logo and branding */}
           {!isCollapsed && (
             <div className="flex items-center gap-2">
-              <div className="rounded-lg p-2" style={{ backgroundColor: "#009edb" }}>
-                <span className="material-icons text-white text-lg">admin_panel_settings</span>
+              <div className="rounded-lg p-2">
+                <Image src="/icon.png" alt="HIH Logo" width={24} height={24} />
               </div>
               <span className="font-bold text-gray-900">HIH Admin</span>
             </div>
@@ -102,8 +118,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
           {isCollapsed && (
             <div className="flex justify-center">
-              <div className="rounded-lg p-2" style={{ backgroundColor: "#009edb" }}>
-                <span className="material-icons text-white text-lg">admin_panel_settings</span>
+              <div className="rounded-lg p-2">
+                <Image src="/icon.png" alt="HIH Logo" width={24} height={24} />
               </div>
             </div>
           )}
@@ -129,22 +145,70 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         {/* Navigation */}
         <nav className={`flex-1 ${isCollapsed ? "px-2 py-4 space-y-2" : "px-2 py-2 space-y-1"}`}>
           {navigationItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href))
+            const isActive =
+              item.href && (pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href)))
+            const hasSubItems = "subItems" in item && item.subItems
+            const isExpanded = expandedItems.includes(item.name)
+
             return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`
-                  flex items-center rounded-lg text-sm font-medium transition-colors
-                  ${isActive ? "text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}
-                  ${isCollapsed ? "justify-center p-3 w-12 h-12" : "gap-3 px-3 py-2"}
-                `}
-                style={isActive ? { backgroundColor: "#009edb" } : {}}
-                title={isCollapsed ? item.name : undefined}
-              >
-                <span className="material-icons text-xl">{item.icon}</span>
-                {!isCollapsed && <span>{item.name}</span>}
-              </Link>
+              <div key={item.name}>
+                {hasSubItems && !item.href ? (
+                  <button
+                    onClick={() => toggleExpanded(item.name)}
+                    className={`
+                      w-full flex items-center justify-between rounded-lg text-sm font-medium transition-colors
+                      ${isExpanded ? "text-gray-900 bg-gray-100" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"}
+                      ${isCollapsed ? "justify-center p-3 w-12 h-12" : "gap-3 px-3 py-2"}
+                    `}
+                    title={isCollapsed ? item.name : undefined}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="material-icons text-xl">{item.icon}</span>
+                      {!isCollapsed && <span>{item.name}</span>}
+                    </div>
+                    {!isCollapsed &&
+                      (isExpanded ? (
+                        <ChevronUp className="h-4 w-4 text-gray-500" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                      ))}
+                  </button>
+                ) : (
+                  <Link
+                    href={item.href || "#"}
+                    className={`
+                      flex items-center rounded-lg text-sm font-medium transition-colors
+                      ${isActive ? "text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}
+                      ${isCollapsed ? "justify-center p-3 w-12 h-12" : "gap-3 px-3 py-2"}
+                    `}
+                    style={isActive ? { backgroundColor: "#009edb" } : {}}
+                    title={isCollapsed ? item.name : undefined}
+                  >
+                    <span className="material-icons text-xl">{item.icon}</span>
+                    {!isCollapsed && <span>{item.name}</span>}
+                  </Link>
+                )}
+
+                {!isCollapsed && hasSubItems && isExpanded && "subItems" in item && (
+                  <div className="ml-2 mt-2 space-y-1 border-l border-gray-200 pl-3">
+                    {item.subItems.map((subItem) => {
+                      const isSubActive = pathname === subItem.href
+                      return (
+                        <Link
+                          key={subItem.name}
+                          href={subItem.href}
+                          className={`
+                            flex items-center rounded-md text-sm font-medium transition-colors px-3 py-2
+                            ${isSubActive ? "text-blue-600 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}
+                          `}
+                        >
+                          {subItem.name}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )
           })}
         </nav>

@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Users, CheckCircle, Building2, LogOut, Menu, AlertCircle, BarChart3, RefreshCw } from "lucide-react"
+import { Users, CheckCircle, LogOut, Menu, AlertCircle, BarChart3, RefreshCw } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 import { getUserProfile } from "@/lib/auth"
 import { getBranchMetrics } from "@/lib/branch-metrics-actions"
+import Image from "next/image"
 
 export default function BranchManagerPage() {
   const [user, setUser] = useState<any>(null)
@@ -199,7 +200,7 @@ export default function BranchManagerPage() {
         <div className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar - Collapsible */}
+      {/* Sidebar - Updated to use Hand in Hand logo */}
       <div
         className={`
     fixed inset-y-0 left-0 z-50 transition-all duration-300 bg-white border-r border-gray-200 shadow-lg lg:relative lg:translate-x-0
@@ -212,16 +213,16 @@ export default function BranchManagerPage() {
           <div className="flex items-center justify-between h-16 px-4">
             {!isCollapsed && (
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg" style={{ backgroundColor: "#009edb" }}>
-                  <Building2 className="h-6 w-6 text-white" />
+                <div className="p-2 rounded-lg">
+                  <Image src="/icon.png" alt="HIH Logo" width={24} height={24} />
                 </div>
                 <span className="text-gray-900 font-semibold">Branch Manager</span>
               </div>
             )}
             {isCollapsed && (
               <div className="flex w-full justify-center">
-                <div className="p-2 rounded-lg" style={{ backgroundColor: "#009edb" }}>
-                  <Building2 className="h-6 w-6 text-white" />
+                <div className="p-2 rounded-lg">
+                  <Image src="/icon.png" alt="HIH Logo" width={24} height={24} />
                 </div>
               </div>
             )}
@@ -340,7 +341,7 @@ export default function BranchManagerPage() {
                     <h2 className="text-4xl font-bold mt-1 text-gray-900">{metrics.activeLoans}</h2>
                     <p className="text-sm text-gray-500 mt-1">Current loans</p>
                   </div>
-                  <Building2 className="h-6 w-6 text-gray-400" />
+                  <Image src="/icon.png" alt="HIH Logo" width={24} height={24} />
                 </div>
               </CardContent>
             </Card>

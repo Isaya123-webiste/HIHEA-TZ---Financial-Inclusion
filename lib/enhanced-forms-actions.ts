@@ -368,6 +368,7 @@ export async function saveDraftForm(userId: string, formData: any) {
       location: formData.location || null,
       title: formData.title || `Financial Inclusion Report - ${formData.group_name || "Draft"}`,
       notes: formData.notes || null,
+      created_by: userId,
     }
 
     if (formId) {
@@ -446,8 +447,9 @@ export async function submitForm(userId: string, formData: any) {
       updated_at: new Date().toISOString(),
       group_name: formData.group_name || null,
       location: formData.location || null,
-      title: formData.title || `Financial Inclusion Report - ${formData.group_name || "Submission"}`,
+      title: formData.title || `Financial Inclusion Report - ${formData.group_name}`,
       notes: formData.notes || null,
+      created_by: userId,
     }
 
     if (formId) {

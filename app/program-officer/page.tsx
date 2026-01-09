@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Users, CheckCircle, Target, LogOut, Menu, AlertCircle, BarChart3, FileText } from "lucide-react"
+import Image from "next/image"
 import { supabase } from "@/lib/supabase-client"
 import { getUserProfile } from "@/lib/auth"
 
@@ -171,87 +172,97 @@ export default function ProgramOfficerPage() {
         <div className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Updated to match Admin style */}
       <div
         className={`
-          fixed inset-y-0 left-0 z-50 transition-all duration-300 ease-in-out lg:relative lg:translate-x-0
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          fixed inset-y-0 left-0 z-50 flex flex-col bg-white shadow-lg transition-all duration-300 lg:relative lg:translate-x-0
           ${sidebarCollapsed ? "w-16" : "w-64"}
-          shadow-lg lg:shadow-none
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
-        style={{ backgroundColor: "#009edb" }}
       >
-        <div className="flex flex-col h-full">
-          {/* Header - Expanded State */}
-          {!sidebarCollapsed && (
-            <div className="flex items-center justify-between h-16 px-4">
-              <div className="flex items-center gap-2">
-                <div className="bg-white p-2 rounded-lg">
-                  <Target className="h-6 w-6" style={{ color: "#009edb" }} />
-                </div>
-                <div className="text-white">
-                  <h2 className="font-semibold">Program Officer</h2>
-                  <p className="text-xs opacity-80">HIH Financial</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition-colors"
-              >
-                <Menu className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-
-          {/* Header - Collapsed State */}
+        {/* Header */}
+        <div
+          className={`border-b ${sidebarCollapsed ? "px-2 py-4 space-y-3" : "px-4 py-4 flex items-center justify-between"}`}
+        >
+          {/* Hamburger button - positioned above logo when collapsed */}
           {sidebarCollapsed && (
-            <div className="flex flex-col items-center pt-4 pb-2">
-              <button
+            <div className="flex justify-center">
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition-colors mb-2"
+                className="p-2 hover:bg-gray-100 w-10 h-10"
               >
-                <Menu className="h-4 w-4" />
-              </button>
-              <div className="bg-white p-2 rounded-lg">
-                <Target className="h-6 w-6" style={{ color: "#009edb" }} />
+                <Menu className="h-5 w-5 text-gray-600" />
+              </Button>
+            </div>
+          )}
+
+          {/* Logo and branding */}
+          {!sidebarCollapsed && (
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg p-2">
+                <Image src="/icon.png" alt="HIH Logo" width={24} height={24} />
+              </div>
+              <span className="font-bold text-gray-900">Program Officer</span>
+            </div>
+          )}
+
+          {sidebarCollapsed && (
+            <div className="flex justify-center">
+              <div className="rounded-lg p-2">
+                <Image src="/icon.png" alt="HIH Logo" width={24} height={24} />
               </div>
             </div>
           )}
 
-          {/* Navigation */}
-          <nav className={`flex-1 p-4 space-y-2 ${sidebarCollapsed ? "pt-2" : ""}`}>
-            {navigationItems.map((item, index) => (
-              <Link
-                key={index}
-                href={item.href}
-                className={`
-                  flex items-center gap-3 w-full p-3 rounded-lg text-white transition-colors
-                  ${item.active ? "bg-white bg-opacity-20" : "hover:bg-white hover:bg-opacity-10"}
-                  ${sidebarCollapsed ? "justify-center" : ""}
-                `}
-                title={sidebarCollapsed ? item.label : undefined}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!sidebarCollapsed && <span>{item.label}</span>}
-              </Link>
-            ))}
-          </nav>
-
-          {/* Bottom section */}
-          <div className="p-4">
-            <button
-              onClick={handleSignOut}
-              className={`
-                flex items-center gap-3 w-full p-3 rounded-lg text-white hover:bg-white hover:bg-opacity-10 transition-colors
-                ${sidebarCollapsed ? "justify-center" : ""}
-              `}
-              title={sidebarCollapsed ? "Sign Out" : undefined}
+          {/* Hamburger button for expanded state */}
+          {!sidebarCollapsed && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-2 hover:bg-gray-100 w-10 h-10"
             >
-              <LogOut className="h-5 w-5 flex-shrink-0" />
-              {!sidebarCollapsed && <span>Sign Out</span>}
-            </button>
-          </div>
+              <Menu className="h-5 w-5 text-gray-600" />
+            </Button>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <nav className={`flex-1 ${sidebarCollapsed ? "px-2 py-4 space-y-2" : "px-2 py-2 space-y-1"}`}>
+          {navigationItems.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className={`
+                flex items-center rounded-lg text-sm font-medium transition-colors
+                ${item.active ? "text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}
+                ${sidebarCollapsed ? "justify-center p-3 w-12 h-12" : "gap-3 px-3 py-2"}
+              `}
+              style={item.active ? { backgroundColor: "#009edb" } : {}}
+              title={sidebarCollapsed ? item.label : undefined}
+            >
+              <item.icon className="h-5 w-5" />
+              {!sidebarCollapsed && <span>{item.label}</span>}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Footer */}
+        <div className={`border-t ${sidebarCollapsed ? "px-2 py-4" : "px-2 py-2"}`}>
+          <Button
+            variant="ghost"
+            onClick={handleSignOut}
+            className={`
+              text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors
+              ${sidebarCollapsed ? "w-12 h-12 p-3 justify-center" : "w-full justify-start gap-3 px-3 py-2"}
+            `}
+            title={sidebarCollapsed ? "Sign Out" : undefined}
+          >
+            <LogOut className="h-5 w-5" />
+            {!sidebarCollapsed && <span>Sign Out</span>}
+          </Button>
         </div>
       </div>
 

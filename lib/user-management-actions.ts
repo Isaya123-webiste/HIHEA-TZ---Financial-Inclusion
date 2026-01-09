@@ -352,3 +352,82 @@ export async function getUserById(userId: string) {
     return { success: false, error: "An unexpected error occurred while fetching the user" }
   }
 }
+
+export async function resetAllBranchReportOfficerPasswords() {
+  try {
+    console.log("[v0] Starting batch password reset for all branch report officers")
+
+    // Get all branch report officer profiles
+    const { data: officers, error: fetchError } = await supabaseAdmin
+      .from("profiles")
+      .select("id, email")
+      .eq("role", "branch_report_officer")
+      .eq("status", "active")
+
+    if (fetchError) {
+      console.error("[v0] Error fetching branch officers:", fetchError)
+      return { success: false, error: "Failed to fetch branch report officers" }
+    }
+
+    if (!officers || officers.length === 0) {
+      return { success: true, data: [], message: "No active branch report officers found" }
+    }
+
+    console.log(`[v0] Found ${officers.length} branch report officers to reset`)
+
+    const results: Array<{ email: string; success: boolean; message: string }> = []
+    const tempPassword = `BranchReportOfficer@2024!` // Standard temporary password
+
+    // Reset password for each branch report officer
+    for (const officer of officers) {
+      try {
+        console.log(`[v0] Resetting password for ${officer.email}`)
+
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(officer.id, {
+          password: tempPassword,
+        })
+
+        if (error) {
+          console.error(`[v0] Error resetting password for ${officer.email}:`, error)
+          results.push({
+            email: officer.email || "unknown",
+            success: false,
+            message: `Failed: ${error.message}`,
+          })
+        } else {
+          console.log(`[v0] Password reset successful for ${officer.email}`)
+          results.push({
+            email: officer.email || "unknown",
+            success: true,
+            message: "Password reset successfully",
+          })
+        }
+      } catch (error) {
+        console.error(`[v0] Unexpected error resetting password for ${officer.email}:`, error)
+        results.push({
+          email: officer.email || "unknown",
+          success: false,
+          message: `Unexpected error: ${error instanceof Error ? error.message : "Unknown error"}`,
+        })
+      }
+    }
+
+    // Count successes and failures
+    const successCount = results.filter((r) => r.success).length
+    const failureCount = results.filter((r) => !r.success).length
+
+    console.log(`[v0] Password reset batch complete: ${successCount} successful, ${failureCount} failed`)
+
+    return {
+      success: successCount > 0,
+      data: results,
+      message: `Reset ${successCount} out of ${officers.length} passwords. Temporary password: ${tempPassword}`,
+    }
+  } catch (error) {
+    console.error("[v0] Unexpected error in resetAllBranchReportOfficerPasswords:", error)
+    return {
+      success: false,
+      error: "Unexpected error occurred while resetting passwords",
+    }
+  }
+}

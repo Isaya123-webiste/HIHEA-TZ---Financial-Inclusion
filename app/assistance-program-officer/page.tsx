@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Menu, X, LogOut, AlertCircle, Target, FileText, BarChart3, CheckCircle } from "lucide-react"
+import { Menu, LogOut, AlertCircle, FileText, BarChart3, CheckCircle } from "lucide-react"
+import Image from "next/image"
 import Link from "next/link"
 import { supabase } from "@/lib/supabase-client"
 import { getUserProfile } from "@/lib/auth"
@@ -107,75 +108,97 @@ export default function AssistanceProgramOfficerDashboard() {
         <div className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Updated to white background with grey links */}
       <div
         className={`
-          fixed inset-y-0 left-0 z-50 bg-[#009edb] transition-all duration-300 lg:relative lg:translate-x-0
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+          fixed inset-y-0 left-0 z-50 flex flex-col bg-white shadow-lg transition-all duration-300 lg:relative lg:translate-x-0
           ${sidebarCollapsed ? "w-16" : "w-64"}
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
-        <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between h-16 px-4">
-            {!sidebarCollapsed && (
-              <div className="flex items-center gap-2">
-                <div className="bg-white p-2 rounded-lg shadow-md">
-                  <Target className="h-6 w-6 text-[#009edb]" />
-                </div>
-                <div className="text-white">
-                  <h2 className="font-semibold text-sm">Assistance Program Officer</h2>
-                  <p className="text-xs text-blue-100">HIH Financial</p>
-                </div>
-              </div>
-            )}
-            {sidebarCollapsed && (
-              <div className="flex items-center justify-center w-full">
-                <div className="bg-white p-2 rounded-lg shadow-md">
-                  <Target className="h-6 w-6 text-[#009edb]" />
-                </div>
-              </div>
-            )}
-
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-white hover:bg-blue-500 transition-colors"
-            >
-              {sidebarCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
-            </button>
-          </div>
-
-          <nav className="flex-1 p-4 space-y-2">
-            {navigationItems.map((item, index) => (
-              <Link
-                key={index}
-                href={item.href}
-                className={`
-                  flex items-center gap-3 w-full p-3 rounded-lg text-white transition-all duration-200
-                  ${item.active ? "bg-white/20 shadow-lg" : "hover:bg-white/10"}
-                  ${sidebarCollapsed ? "justify-center" : ""}
-                `}
-                title={sidebarCollapsed ? item.label : undefined}
-                onClick={() => setSidebarOpen(false)}
+        {/* Header */}
+        <div
+          className={`border-b ${sidebarCollapsed ? "px-2 py-4 space-y-3" : "px-4 py-4 flex items-center justify-between"}`}
+        >
+          {/* Hamburger button when collapsed */}
+          {sidebarCollapsed && (
+            <div className="flex justify-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-2 hover:bg-gray-100 w-10 h-10"
               >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!sidebarCollapsed && <span>{item.label}</span>}
-              </Link>
-            ))}
-          </nav>
+                <Menu className="h-5 w-5 text-gray-600" />
+              </Button>
+            </div>
+          )}
 
-          <div className="p-4">
-            <button
-              onClick={handleSignOut}
-              className={`
-                flex items-center gap-3 w-full p-3 rounded-lg text-white hover:bg-white/10 transition-colors
-                ${sidebarCollapsed ? "justify-center" : ""}
-              `}
-              title={sidebarCollapsed ? "Sign Out" : undefined}
+          {/* Logo and branding */}
+          {!sidebarCollapsed && (
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg p-2">
+                <Image src="/icon.png" alt="HIH Logo" width={24} height={24} />
+              </div>
+              <span className="font-bold text-gray-900">Assistance Program Officer</span>
+            </div>
+          )}
+
+          {sidebarCollapsed && (
+            <div className="flex justify-center">
+              <div className="rounded-lg p-2">
+                <Image src="/icon.png" alt="HIH Logo" width={24} height={24} />
+              </div>
+            </div>
+          )}
+
+          {/* Hamburger button for expanded state */}
+          {!sidebarCollapsed && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-2 hover:bg-gray-100 w-10 h-10"
             >
-              <LogOut className="h-5 w-5 flex-shrink-0" />
-              {!sidebarCollapsed && <span>Sign Out</span>}
-            </button>
-          </div>
+              <Menu className="h-5 w-5 text-gray-600" />
+            </Button>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <nav className={`flex-1 ${sidebarCollapsed ? "px-2 py-4 space-y-2" : "px-2 py-2 space-y-1"}`}>
+          {navigationItems.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className={`
+                flex items-center rounded-lg text-sm font-medium transition-colors
+                ${item.active ? "text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}
+                ${sidebarCollapsed ? "justify-center p-3 w-12 h-12" : "gap-3 px-3 py-2"}
+              `}
+              style={item.active ? { backgroundColor: "#009edb" } : {}}
+              title={sidebarCollapsed ? item.label : undefined}
+            >
+              <item.icon className="h-5 w-5" />
+              {!sidebarCollapsed && <span>{item.label}</span>}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Footer */}
+        <div className={`border-t ${sidebarCollapsed ? "px-2 py-4" : "px-2 py-2"}`}>
+          <Button
+            variant="ghost"
+            onClick={handleSignOut}
+            className={`
+              text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors
+              ${sidebarCollapsed ? "w-12 h-12 p-3 justify-center" : "w-full justify-start gap-3 px-3 py-2"}
+            `}
+            title={sidebarCollapsed ? "Sign Out" : undefined}
+          >
+            <LogOut className="h-5 w-5" />
+            {!sidebarCollapsed && <span>Sign Out</span>}
+          </Button>
         </div>
       </div>
 

@@ -348,8 +348,8 @@ export default function BranchReportOfficerPage() {
           {!isCollapsed && (
             <div className="flex items-center justify-between h-16 px-4">
               <div className="flex items-center gap-2">
-                <div className="bg-white p-2 rounded-lg">
-                  <PieChart className="h-6 w-6" style={{ color: "#009edb" }} />
+                <div className="p-2 rounded-lg">
+                  <PieChart className="h-6 w-6 text-white" />
                 </div>
                 <span className="font-bold text-white">HIH Report</span>
               </div>
@@ -375,8 +375,8 @@ export default function BranchReportOfficerPage() {
               >
                 <Menu className="h-4 w-4" />
               </Button>
-              <div className="bg-white p-2 rounded-lg">
-                <PieChart className="h-6 w-6" style={{ color: "#009edb" }} />
+              <div className="p-2 rounded-lg">
+                <PieChart className="h-6 w-6 text-white" />
               </div>
             </div>
           )}

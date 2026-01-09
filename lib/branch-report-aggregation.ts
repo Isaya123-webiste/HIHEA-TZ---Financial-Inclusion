@@ -1,6 +1,7 @@
 "use server"
 
 import { supabaseAdmin } from "./supabase-admin"
+import { upsertUsageWithKRIs } from "./usage-actions"
 
 export async function aggregateFormToBranchReport(formId: string, branchId: string, formData: any, projectId?: string) {
   try {
@@ -129,6 +130,15 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
       }
 
       console.log("Branch report updated successfully")
+
+      try {
+        const updatedReport = { ...existingReport, ...updates }
+        await upsertUsageWithKRIs(updatedReport, projectId || existingReport.project_id, branchId)
+      } catch (kriError) {
+        console.warn("Warning: KRI calculation failed, but branch report was updated:", kriError)
+        // Don't fail the entire aggregation if KRI calculation fails
+      }
+
       return { success: true, message: "Branch report updated successfully" }
     } else {
       // Create new branch report
@@ -164,6 +174,14 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
       }
 
       console.log("Branch report created successfully")
+
+      try {
+        await upsertUsageWithKRIs(reportWithStringFields, projectId, branchId)
+      } catch (kriError) {
+        console.warn("Warning: KRI calculation failed, but branch report was created:", kriError)
+        // Don't fail the entire aggregation if KRI calculation fails
+      }
+
       return { success: true, message: "Branch report created successfully" }
     }
   } catch (error: any) {

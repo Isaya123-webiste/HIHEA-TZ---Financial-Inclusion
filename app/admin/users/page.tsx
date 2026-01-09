@@ -63,8 +63,8 @@ export default function UsersPage() {
   const [showEditPassword, setShowEditPassword] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  // Form states
   const [editForm, setEditForm] = useState({
     full_name: "",
     email: "",
@@ -85,7 +85,6 @@ export default function UsersPage() {
     password: "",
   })
 
-  // Load initial data
   useEffect(() => {
     loadUsers()
     loadBranches()
@@ -94,14 +93,16 @@ export default function UsersPage() {
   const loadUsers = async () => {
     try {
       setLoading(true)
-      console.log("Loading users...")
+      setError(null)
+      console.log("[v0] Loading users...")
       const result = await getAllUsers()
 
       if (result.success) {
-        console.log("Users loaded successfully:", result.data?.length)
+        console.log("[v0] Users loaded successfully:", result.data?.length)
         setUsers(result.data || [])
       } else {
-        console.error("Failed to load users:", result.error)
+        console.error("[v0] Failed to load users:", result.error)
+        setError(result.error || "Failed to load users")
         toast({
           title: "Error",
           description: result.error || "Failed to load users",
@@ -109,10 +110,12 @@ export default function UsersPage() {
         })
       }
     } catch (error) {
-      console.error("Error loading users:", error)
+      console.error("[v0] Error loading users:", error)
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred while loading users"
+      setError(errorMessage)
       toast({
         title: "Error",
-        description: "An unexpected error occurred while loading users",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -202,7 +205,6 @@ export default function UsersPage() {
       setIsSubmitting(true)
       console.log("Updating user:", selectedUser.id, "with data:", editForm)
 
-      // First update the user profile
       const result = await updateUser(selectedUser.id, {
         full_name: editForm.full_name,
         email: editForm.email,
@@ -222,7 +224,6 @@ export default function UsersPage() {
         return
       }
 
-      // If password change is requested, update the password
       if (editForm.changePassword && editForm.password) {
         const passwordResult = await changeUserPassword(selectedUser.id, editForm.password)
 
@@ -240,7 +241,6 @@ export default function UsersPage() {
 
       console.log("User updated successfully:", result.data)
 
-      // Update the user in the local state immediately
       setUsers((prevUsers) =>
         prevUsers.map((user) => (user.id === selectedUser.id ? { ...user, ...result.data } : user)),
       )
@@ -256,7 +256,6 @@ export default function UsersPage() {
       setIsEditDialogOpen(false)
       setSelectedUser(null)
 
-      // Reload data to ensure consistency
       setTimeout(() => {
         loadUsers()
       }, 500)
@@ -284,7 +283,6 @@ export default function UsersPage() {
       const result = await deleteUser(userToDelete.id)
 
       if (result.success) {
-        // Remove user from local state immediately
         setUsers((prevUsers) => prevUsers.filter((u) => u.id !== userToDelete.id))
 
         toast({
@@ -312,7 +310,6 @@ export default function UsersPage() {
   }
 
   const handleCreateUser = async () => {
-    // Validation
     if (!createForm.full_name.trim()) {
       toast({
         title: "Validation Error",
@@ -374,7 +371,6 @@ export default function UsersPage() {
       if (result.success) {
         console.log("User created successfully:", result.data)
 
-        // Add new user to local state immediately
         setUsers((prevUsers) => [result.data, ...prevUsers])
 
         toast({
@@ -392,7 +388,6 @@ export default function UsersPage() {
           password: "",
         })
 
-        // Reload data to ensure consistency
         setTimeout(() => {
           loadUsers()
         }, 500)
@@ -463,6 +458,27 @@ export default function UsersPage() {
           <RefreshCw className="h-8 w-8 animate-spin" />
           <span className="ml-2">Loading users...</span>
         </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-6">
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <p className="font-semibold">Failed to load users</p>
+            <p className="text-sm mt-1">{error}</p>
+            <p className="text-sm mt-2">
+              This may be due to missing environment variables or Supabase configuration issues.
+            </p>
+          </AlertDescription>
+        </Alert>
+        <Button onClick={loadUsers} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Retry
+        </Button>
       </div>
     )
   }
@@ -721,7 +737,6 @@ export default function UsersPage() {
         </CardContent>
       </Card>
 
-      {/* Edit User Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -814,7 +829,6 @@ export default function UsersPage() {
               />
             </div>
 
-            {/* Password Change Section */}
             <div className="border-t pt-4">
               <div className="flex items-center space-x-2 mb-3">
                 <input
