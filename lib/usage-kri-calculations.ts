@@ -28,26 +28,22 @@ export interface KRIValues {
 }
 
 /**
- * Safe division function - returns 0 if dividing by zero
+ * Safe division function - returns 0 if dividing by zero, rounds to 2 decimal places
  */
 function safeDivide(numerator = 0, denominator = 0): number {
   if (denominator === 0 || !denominator) {
     return 0
   }
   const result = numerator / denominator
-  return isNaN(result) ? 0 : result
+  return isNaN(result) ? 0 : Math.round(result * 100) / 100
 }
 
 /**
  * Calculate Slow Account Rate
- * Formula: 0 ÷ members_at_end
- * Note: Formula shows 0 as numerator, but based on context this might need to be inactive_accounts
- * Currently implementing as per provided formula
+ * Formula: 0 ÷ members_at_end (always returns 0 as per specification)
  */
 export async function calculateSlowAccountRate(branchData: BranchReportData): Promise<number> {
-  const numerator = 0
-  const denominator = branchData.members_at_end || 0
-  return safeDivide(numerator, denominator)
+  return 0
 }
 
 /**

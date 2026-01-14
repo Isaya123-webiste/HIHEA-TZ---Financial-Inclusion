@@ -1,4 +1,4 @@
-"use server"
+// This is a utility library imported by an API route, not a server action file
 
 import { supabaseAdmin } from "@/lib/supabase-admin"
 
