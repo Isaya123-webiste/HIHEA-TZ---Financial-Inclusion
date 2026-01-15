@@ -3,15 +3,19 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Shield } from "lucide-react"
+import { Shield, Users, Building2, FileText, CheckCircle } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 import { getAllUsers, getAllBranches, getUserProfileSimple } from "@/lib/admin-actions"
 import { debugAdminUser, fixAdminRole } from "@/lib/debug-admin"
+import UsageChart from "@/components/usage-chart"
+import FactorsFilterBar from "@/components/factors-filter-bar"
 
 export default function AdminDashboard() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [users, setUsers] = useState<any[]>([])
   const [branches, setBranches] = useState<any[]>([])
+  const [submittedForms, setSubmittedForms] = useState(0)
+  const [approvedForms, setApprovedForms] = useState(0)
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -19,6 +23,8 @@ export default function AdminDashboard() {
   const [adminProfile, setAdminProfile] = useState<any>(null)
   const [debugInfo, setDebugInfo] = useState<any>(null)
   const [fixing, setFixing] = useState(false)
+  const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set())
+  const [selectedBranches, setSelectedBranches] = useState<Set<string>>(new Set())
 
   const handleFixAdminRole = async () => {
     if (!currentUser) return
@@ -29,7 +35,6 @@ export default function AdminDashboard() {
       console.log("Fix result:", result)
 
       if (result.success) {
-        // Reload the page to check again
         window.location.reload()
       } else {
         setError(`Failed to fix admin role: ${result.error}`)
@@ -42,12 +47,35 @@ export default function AdminDashboard() {
     }
   }
 
+  const fetchFormStats = async () => {
+    try {
+      const { data: submitted, error: submittedError } = await supabase
+        .from("form_submissions")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "submitted")
+
+      const { data: approved, error: approvedError } = await supabase
+        .from("form_submissions")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "approved")
+
+      if (!submittedError && submitted) {
+        setSubmittedForms(submitted.length || 0)
+      }
+
+      if (!approvedError && approved) {
+        setApprovedForms(approved.length || 0)
+      }
+    } catch (error) {
+      console.error("Error fetching form stats:", error)
+    }
+  }
+
   useEffect(() => {
     async function checkAdminAndLoadData() {
       try {
         console.log("Starting admin check...")
 
-        // Get current user
         const {
           data: { user },
           error: userError,
@@ -81,6 +109,8 @@ export default function AdminDashboard() {
           if (branchesResult.success && branchesResult.branches) {
             setBranches(branchesResult.branches)
           }
+
+          await fetchFormStats()
 
           setLoading(false)
           return
@@ -120,6 +150,8 @@ export default function AdminDashboard() {
             if (branchesResult.success && branchesResult.branches) {
               setBranches(branchesResult.branches)
             }
+
+            await fetchFormStats()
           } else {
             console.log("User is not admin. Role:", profileResult.profile.role)
             setError(`Access denied. Your role is '${profileResult.profile.role}', but admin role is required.`)
@@ -233,9 +265,9 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 space-y-8">
       {/* Header */}
-      <div className="mb-8">
+      <div>
         <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
         <p className="text-muted-foreground">
           Welcome{adminProfile?.full_name ? `, ${adminProfile.full_name.split(" ")[0]}` : ""}! Welcome to HIH Financial
@@ -243,52 +275,70 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      {/* Stats Cards Only */}
       <div className="grid gap-6 md:grid-cols-4">
-        <Card>
+        {/* Card 1: Total Users - White background */}
+        <Card className="bg-white border border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <span className="material-icons text-muted-foreground">people</span>
+            <CardTitle className="text-sm font-medium text-gray-700">Total Users</CardTitle>
+            <Users className="h-5 w-5 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{users.length}</div>
-            <p className="text-xs text-muted-foreground">Registered users</p>
+            <div className="text-2xl font-bold text-gray-900">{users.length}</div>
+            <p className="text-xs text-gray-600">Registered users</p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Card 2: Total Branches - Blue background */}
+        <Card className="bg-[#009EDB]" style={{ backgroundColor: "#009EDB" }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Branches</CardTitle>
-            <span className="material-icons text-muted-foreground">business</span>
+            <CardTitle className="text-sm font-medium text-white">Total Branches</CardTitle>
+            <Building2 className="h-5 w-5 text-white" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{branches.length}</div>
-            <p className="text-xs text-muted-foreground">Active locations</p>
+            <div className="text-2xl font-bold text-white">{branches.length}</div>
+            <p className="text-xs text-white/80">Active locations</p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Card 3: Forms Submitted by B.R.Os - White background */}
+        <Card className="bg-white border border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Branches</CardTitle>
-            <span className="material-icons text-green-600">check_circle</span>
+            <CardTitle className="text-sm font-medium text-gray-700">Forms Submitted</CardTitle>
+            <FileText className="h-5 w-5 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{branches.filter((b) => b.status === "active").length}</div>
-            <p className="text-xs text-muted-foreground">Operational branches</p>
+            <div className="text-2xl font-bold text-gray-900">{submittedForms}</div>
+            <p className="text-xs text-gray-600">By B.R.Os</p>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* Card 4: Forms Approved by P.O - Blue background */}
+        <Card className="bg-[#009EDB]" style={{ backgroundColor: "#009EDB" }}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Status</CardTitle>
-            <span className="material-icons text-green-600">check_circle</span>
+            <CardTitle className="text-sm font-medium text-white">Forms Approved</CardTitle>
+            <CheckCircle className="h-5 w-5 text-white" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">Active</div>
-            <p className="text-xs text-muted-foreground">All systems operational</p>
+            <div className="text-2xl font-bold text-white">{approvedForms}</div>
+            <p className="text-xs text-white/80">By P.O</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Shared filter controls outside chart components */}
+      <FactorsFilterBar
+        selectedProjects={selectedProjects}
+        setSelectedProjects={setSelectedProjects}
+        selectedBranches={selectedBranches}
+        setSelectedBranches={setSelectedBranches}
+      />
+
+      {/* Pass filters to Usage chart */}
+      <UsageChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
+
+      {/* Future: Barriers and Access charts will also receive these same filters */}
+      {/* <BarriersChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} /> */}
+      {/* <AccessChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} /> */}
     </div>
   )
 }
