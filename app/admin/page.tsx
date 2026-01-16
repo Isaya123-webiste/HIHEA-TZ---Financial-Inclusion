@@ -9,6 +9,7 @@ import { getAllUsers, getAllBranches, getUserProfileSimple } from "@/lib/admin-a
 import { debugAdminUser, fixAdminRole } from "@/lib/debug-admin"
 import UsageChart from "@/components/usage-chart"
 import FactorsFilterBar from "@/components/factors-filter-bar"
+import AccessTable from "@/components/access-table"
 
 export default function AdminDashboard() {
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -375,9 +376,10 @@ export default function AdminDashboard() {
       {/* Pass filters to Usage chart */}
       <UsageChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
 
-      {/* Future: Barriers and Access charts will also receive these same filters */}
+      <AccessTable selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
+
+      {/* Future: Barriers chart will also receive these same filters */}
       {/* <BarriersChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} /> */}
-      {/* <AccessChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} /> */}
     </div>
   )
 }
