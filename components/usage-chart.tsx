@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
-import { Badge } from "@/components/ui/badge"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { fetchUsageChartData } from "@/lib/usage-display-actions"
 
 interface UsageData {
@@ -21,7 +20,8 @@ interface UsageData {
 
 interface ChartDataPoint {
   category: string
-  [key: string]: any
+  value: number
+  projectName: string
 }
 
 interface UsageChartProps {
@@ -29,15 +29,8 @@ interface UsageChartProps {
   selectedBranches: Set<string>
 }
 
-interface TooltipPayload {
-  name?: string
-  value?: number
-}
-
 export default function UsageChart({ selectedProjects, selectedBranches }: UsageChartProps) {
   const [usageData, setUsageData] = useState<UsageData[]>([])
-  const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
-  const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hoveredBar, setHoveredBar] = useState<string | null>(null)
@@ -70,8 +63,6 @@ export default function UsageChart({ selectedProjects, selectedBranches }: Usage
         }))
 
         setUsageData(enrichedData)
-        setProjects(result.projects || [])
-        setBranches(result.branches || [])
       } catch (err) {
         console.error("Error fetching usage data:", err)
         setError("Failed to load usage data")
@@ -88,44 +79,38 @@ export default function UsageChart({ selectedProjects, selectedBranches }: Usage
       (item) => selectedBranches.has(item.branchId) && selectedProjects.has(item.projectId),
     )
 
+    if (filtered.length === 0) return []
+
     const categories = ["INSURANCE", "ACCOUNT", "SAVINGS", "BORROWINGS"]
-    const projectNames = [...new Set(filtered.map((d) => d.projectName))]
-
     return categories.map((category) => {
-      const point: ChartDataPoint = { category }
-
-      projectNames.forEach((project) => {
-        const relevantData = filtered.filter((d) => d.projectName === project)
-        if (relevantData.length > 0) {
-          const values = relevantData.map((d) => {
-            switch (category) {
-              case "INSURANCE":
-                return d.insurance
-              case "ACCOUNT":
-                return d.account
-              case "SAVINGS":
-                return d.savings
-              case "BORROWINGS":
-                return d.borrowings
-              default:
-                return 0
-            }
-          })
-          const avgValue = values.reduce((a, b) => a + b, 0) / values.length
-          point[project] = Math.min(avgValue, 100)
+      const values = filtered.map((d) => {
+        switch (category) {
+          case "INSURANCE":
+            return d.insurance
+          case "ACCOUNT":
+            return d.account
+          case "SAVINGS":
+            return d.savings
+          case "BORROWINGS":
+            return d.borrowings
+          default:
+            return 0
         }
       })
-
-      return point
+      const avgValue = values.reduce((a, b) => a + b, 0) / values.length
+      return {
+        category,
+        value: Math.min(avgValue, 100),
+        projectName: filtered[0].projectName,
+      }
     })
   }, [usageData, selectedBranches, selectedProjects])
 
-  const chartProjects = useMemo(() => {
-    const filtered = usageData.filter(
-      (item) => selectedBranches.has(item.branchId) && selectedProjects.has(item.projectId),
-    )
-    return [...new Set(filtered.map((d) => d.projectName))]
-  }, [usageData, selectedBranches, selectedProjects])
+  const getBarColor = (value: number) => {
+    if (value >= 31) return "#22c55e" // green
+    if (value >= 21) return "#eab308" // yellow
+    return "#ef4444" // red
+  }
 
   const avgUsageActualData = useMemo(() => {
     const filtered = usageData.filter(
@@ -136,13 +121,16 @@ export default function UsageChart({ selectedProjects, selectedBranches }: Usage
     return (sum / filtered.length).toFixed(2)
   }, [usageData, selectedBranches, selectedProjects])
 
-  const colors = ["#009EDB", "#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#FFD93D", "#6BCB77"]
-
   if (loading) {
     return (
-      <Card className="border-0 shadow-xl overflow-hidden">
+      <Card className="border-0 shadow-lg overflow-hidden">
         <CardHeader className="bg-[#009EDB] pb-6">
-          <CardTitle className="text-3xl font-bold text-white">Usage</CardTitle>
+          <div>
+            <CardTitle className="text-2xl font-bold text-white">Usage Actual Data (X):</CardTitle>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-white/90 text-sm">Usage:</span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-96 bg-white">
           <div className="text-center">
@@ -156,9 +144,9 @@ export default function UsageChart({ selectedProjects, selectedBranches }: Usage
 
   if (error) {
     return (
-      <Card className="border-0 shadow-xl overflow-hidden">
+      <Card className="border-0 shadow-lg overflow-hidden">
         <CardHeader className="bg-[#009EDB] pb-6">
-          <CardTitle className="text-3xl font-bold text-white">Usage</CardTitle>
+          <CardTitle className="text-2xl font-bold text-white">Usage Actual Data (X):</CardTitle>
         </CardHeader>
         <CardContent className="bg-white">
           <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 text-red-700 font-semibold">{error}</div>
@@ -168,113 +156,96 @@ export default function UsageChart({ selectedProjects, selectedBranches }: Usage
   }
 
   return (
-    <Card className="border-0 shadow-xl overflow-hidden">
-      <CardHeader className="bg-[#009EDB] pb-3">
-        <div>
-          <CardTitle className="text-3xl font-bold text-white mb-2">Usage</CardTitle>
-          <div className="flex items-baseline gap-2">
-            <span className="text-white text-sm font-medium opacity-90">Usage Actual Data:</span>
-            <span className="text-white text-2xl font-bold">{avgUsageActualData}%</span>
+    <Card className="border-0 shadow-lg overflow-hidden">
+      <CardHeader className="bg-[#009EDB] pb-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-5xl font-bold text-white">{avgUsageActualData}%</CardTitle>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-sm bg-white"></div>
+            <span className="text-white text-lg font-bold">Usage</span>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-8 space-y-6 bg-white">
-        {(selectedBranches.size > 0 || selectedProjects.size > 0) && (
-          <div className="space-y-3 pb-4 border-b border-gray-100">
-            {selectedProjects.size > 0 && (
-              <div className="flex flex-wrap gap-2 items-center">
-                {projects
-                  .filter((p) => selectedProjects.has(p.id))
-                  .map((project) => (
-                    <Badge key={project.id} className="bg-blue-100 text-[#009EDB] hover:bg-blue-200 font-medium">
-                      {project.name}
-                    </Badge>
-                  ))}
-              </div>
-            )}
-            {selectedBranches.size > 0 && (
-              <div className="flex flex-wrap gap-2 items-center">
-                {branches
-                  .filter((b) => selectedBranches.has(b.id))
-                  .map((branch) => (
-                    <Badge key={branch.id} className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200 font-medium">
-                      {branch.name}
-                    </Badge>
-                  ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Chart */}
+      <CardContent className="pt-8 bg-[#009EDB]">
         {chartData.length > 0 ? (
-          <div className="space-y-6">
-            <div className="bg-[#009EDB] rounded-xl p-6 shadow-lg transition-all duration-300">
-              <div className="w-full h-96 bg-white rounded-lg p-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis
-                      dataKey="category"
-                      tick={{ fill: "#1f2937", fontSize: 13, fontWeight: 600 }}
-                      axisLine={{ stroke: "#d1d5db" }}
-                    />
-                    <YAxis
-                      label={{
-                        value: "Usage (%)",
-                        angle: -90,
-                        position: "insideLeft",
-                        style: { fill: "#1f2937", fontWeight: 600 },
+          <div className="w-full h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 60, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="0" stroke="#ffffff" vertical={false} />
+                <XAxis
+                  dataKey="category"
+                  tick={{ fill: "#ffffff", fontSize: 13, fontWeight: 600 }}
+                  axisLine={{ stroke: "#ffffff" }}
+                />
+                <YAxis
+                  label={{
+                    value: "Usage (%)",
+                    angle: -90,
+                    position: "insideLeft",
+                    style: { fill: "#ffffff", fontWeight: 600, fontSize: 12 },
+                  }}
+                  domain={[0, 100]}
+                  ticks={[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
+                  tick={{ fill: "#ffffff", fontSize: 12 }}
+                  axisLine={{ stroke: "#ffffff" }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#000000",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "10px 14px",
+                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                  }}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload[0]) {
+                      const data = payload[0].payload as ChartDataPoint
+                      return (
+                        <div className="bg-black text-white px-3 py-2 rounded-md text-sm">
+                          <p className="font-semibold">{data.projectName}</p>
+                          <p className="text-white/90">{data.category}</p>
+                          <p className="text-white font-bold">{(payload[0].value as number).toFixed(2)}%</p>
+                        </div>
+                      )
+                    }
+                    return null
+                  }}
+                  cursor={false}
+                />
+                <Bar
+                  dataKey="value"
+                  radius={[8, 8, 0, 0]}
+                  label={{
+                    position: "top",
+                    fill: "#ffffff",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    formatter: (value: number) => `${value.toFixed(2)}%`,
+                  }}
+                  onMouseEnter={(data, index) => setHoveredBar(`bar-${index}`)}
+                  onMouseLeave={() => setHoveredBar(null)}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={hoveredBar === `bar-${index}` ? "#A61E22" : getBarColor(entry.value)}
+                      style={{
+                        transition: "fill 0.2s ease-in-out",
+                        cursor: "pointer",
                       }}
-                      domain={[0, 100]}
-                      ticks={[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
-                      tick={{ fill: "#1f2937", fontSize: 12 }}
-                      axisLine={{ stroke: "#d1d5db" }}
                     />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#000000",
-                        border: "none",
-                        borderRadius: "8px",
-                        padding: "12px 16px",
-                        boxShadow: "0 10px 25px rgba(0, 0, 0, 0.2)",
-                      }}
-                      formatter={(value: any) => `${(value as number).toFixed(2)}%`}
-                      labelFormatter={(label) => label}
-                      labelStyle={{ color: "#ffffff", fontWeight: 600, marginBottom: "4px" }}
-                      cursor={{ fill: "rgba(0, 158, 219, 0.05)" }}
-                    />
-                    {chartProjects.map((project, index) => (
-                      <Bar
-                        key={project}
-                        dataKey={project}
-                        fill={colors[index % colors.length]}
-                        radius={[6, 6, 0, 0]}
-                        className="transition-all duration-200 ease-out"
-                        onMouseEnter={() => setHoveredBar(project)}
-                        onMouseLeave={() => setHoveredBar(null)}
-                        style={{
-                          fill: hoveredBar === project ? "#A61E22" : colors[index % colors.length],
-                          transition: "fill 0.2s ease-in-out",
-                          cursor: "pointer",
-                        }}
-                      />
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            <div className="text-xs text-gray-500 text-center font-medium">
-              Displaying {chartProjects.length} project{chartProjects.length !== 1 ? "s" : ""} across{" "}
-              {selectedBranches.size} branch{selectedBranches.size !== 1 ? "es" : ""}
-            </div>
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         ) : (
-          <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-            <p className="text-gray-600 font-semibold text-lg">No usage data available</p>
-            <p className="text-gray-500 text-sm mt-2">Try adjusting your project or branch selection</p>
+          <div className="text-center py-16">
+            <p className="text-white font-semibold text-lg">No usage data available</p>
+            <p className="text-white/70 text-sm mt-2">Try adjusting your project or branch selection</p>
           </div>
         )}
       </CardContent>

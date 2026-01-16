@@ -267,62 +267,101 @@ export default function AdminDashboard() {
   return (
     <div className="p-6 space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome{adminProfile?.full_name ? `, ${adminProfile.full_name.split(" ")[0]}` : ""}! Welcome to HIH Financial
-          Inclusion Admin Panel
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back, <span className="font-semibold text-gray-900">{adminProfile?.full_name || "Admin"}</span>!
+          </p>
+        </div>
+        <div className="text-right text-sm text-gray-600">
+          <p className="font-medium">Last updated: Just now</p>
+          <div className="mt-1 w-10 h-10 rounded-full bg-orange-400 flex items-center justify-center text-white font-bold">
+            {adminProfile?.full_name ? adminProfile.full_name.charAt(0) : "A"}
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-4">
-        {/* Card 1: Total Users - White background */}
-        <Card className="bg-white border border-gray-200">
+        {/* Card 1: Total Users - Black background */}
+        <Card className="bg-black border-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Total Users</CardTitle>
-            <Users className="h-5 w-5 text-gray-500" />
+            <CardTitle className="text-sm font-medium text-white">Total Users</CardTitle>
+            <Users className="h-5 w-5 text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{users.length}</div>
-            <p className="text-xs text-gray-600">Registered users</p>
+            <div className="text-3xl font-bold text-white">{users.length}</div>
+            <p className="text-xs text-gray-400">Registered users</p>
+            <div className="mt-2 flex items-center gap-1 text-xs text-green-400 font-semibold">
+              <span>↑ 12%</span>
+              <span className="text-gray-500">vs last month</span>
+            </div>
           </CardContent>
         </Card>
 
         {/* Card 2: Total Branches - Blue background */}
-        <Card className="bg-[#009EDB]" style={{ backgroundColor: "#009EDB" }}>
+        <Card className="bg-[#009EDB] border-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-white">Total Branches</CardTitle>
             <Building2 className="h-5 w-5 text-white" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{branches.length}</div>
+            <div className="text-3xl font-bold text-white">{branches.length}</div>
             <p className="text-xs text-white/80">Active locations</p>
+            <div className="mt-2 flex items-center gap-1 text-xs text-green-300 font-semibold">
+              <span>↑ 4.1%</span>
+              <span className="text-white/60">vs last month</span>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Card 3: Forms Submitted by B.R.Os - White background */}
-        <Card className="bg-white border border-gray-200">
+        {/* Card 3: Forms Submitted by B.R.Os - Black background */}
+        <Card className="bg-black border-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Forms Submitted</CardTitle>
-            <FileText className="h-5 w-5 text-gray-500" />
+            <CardTitle className="text-sm font-medium text-white">Forms Submitted</CardTitle>
+            <FileText className="h-5 w-5 text-blue-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{submittedForms}</div>
-            <p className="text-xs text-gray-600">By B.R.Os</p>
+            <div className="text-3xl font-bold text-white">{submittedForms}</div>
+            <p className="text-xs text-gray-400">By B.R.Os</p>
+            <div className="mt-2 flex items-center gap-1 text-xs text-red-400 font-semibold">
+              <span>↓ 2.5%</span>
+              <span className="text-gray-500">vs last month</span>
+            </div>
           </CardContent>
         </Card>
 
         {/* Card 4: Forms Approved by P.O - Blue background */}
-        <Card className="bg-[#009EDB]" style={{ backgroundColor: "#009EDB" }}>
+        <Card className="bg-[#009EDB] border-0">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-white">Forms Approved</CardTitle>
             <CheckCircle className="h-5 w-5 text-white" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">{approvedForms}</div>
+            <div className="text-3xl font-bold text-white">{approvedForms}</div>
             <p className="text-xs text-white/80">By P.O</p>
+            <div className="mt-2 flex items-center gap-1 text-xs text-green-300 font-semibold">
+              <span>↑ 8.1%</span>
+              <span className="text-white/60">vs last month</span>
+            </div>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="flex items-center gap-4 text-sm font-medium">
+        <span className="text-gray-600">Status Range:</span>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded bg-green-500"></div>
+          <span className="text-gray-600">31%-50%</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded bg-yellow-500"></div>
+          <span className="text-gray-600">21%-30%</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded bg-red-500"></div>
+          <span className="text-gray-600">0%-20%</span>
+        </div>
       </div>
 
       {/* Shared filter controls outside chart components */}

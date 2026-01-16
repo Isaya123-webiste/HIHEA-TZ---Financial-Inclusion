@@ -37,6 +37,52 @@ export async function getUsageWeights() {
   }
 }
 
+// Get all ACCESS weights
+export async function getAccessWeights() {
+  try {
+    console.log("[v0] Fetching ACCESS weights")
+
+    const { data, error } = await supabaseAdmin
+      .from("access_weights_config")
+      .select("*")
+      .order("category", { ascending: true })
+      .order("order_index", { ascending: true })
+
+    if (error) {
+      console.error("[v0] Error fetching ACCESS weights:", error)
+      return { success: false, error: `Failed to fetch ACCESS weights: ${error.message}` }
+    }
+
+    return { success: true, data: data || [] }
+  } catch (error: any) {
+    console.error("[v0] Exception in getAccessWeights:", error)
+    return { success: false, error: error?.message || "Failed to fetch ACCESS weights" }
+  }
+}
+
+// Get all BARRIERS weights
+export async function getBarriersWeights() {
+  try {
+    console.log("[v0] Fetching BARRIERS weights")
+
+    const { data, error } = await supabaseAdmin
+      .from("barriers_weights_config")
+      .select("*")
+      .order("category", { ascending: true })
+      .order("order_index", { ascending: true })
+
+    if (error) {
+      console.error("[v0] Error fetching BARRIERS weights:", error)
+      return { success: false, error: `Failed to fetch BARRIERS weights: ${error.message}` }
+    }
+
+    return { success: true, data: data || [] }
+  } catch (error: any) {
+    console.error("[v0] Exception in getBarriersWeights:", error)
+    return { success: false, error: error?.message || "Failed to fetch BARRIERS weights" }
+  }
+}
+
 // Update a weight value in usage_weights_config AND Update the corresponding column in Usage table
 export async function updateWeight(metricKey: string, newValue: number) {
   try {
@@ -103,5 +149,61 @@ export async function updateWeight(metricKey: string, newValue: number) {
   } catch (error: any) {
     console.error("[v0] Exception in updateWeight:", error)
     return { success: false, error: error?.message || "Failed to update weight" }
+  }
+}
+
+// Update a weight value in access_weights_config
+export async function updateAccessWeight(metricKey: string, newValue: number) {
+  try {
+    console.log(`[v0] Updating ACCESS weight: ${metricKey} to ${newValue}`)
+
+    const { data: updatedWeight, error: weightError } = await supabaseAdmin
+      .from("access_weights_config")
+      .update({
+        weight_value: newValue,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("metric_key", metricKey)
+      .select()
+      .single()
+
+    if (weightError) {
+      console.error("[v0] Error updating access_weights_config:", weightError)
+      return { success: false, error: `Failed to update ACCESS weight: ${weightError.message}` }
+    }
+
+    console.log("[v0] ACCESS weight updated successfully")
+    return { success: true, data: updatedWeight }
+  } catch (error: any) {
+    console.error("[v0] Exception in updateAccessWeight:", error)
+    return { success: false, error: error?.message || "Failed to update ACCESS weight" }
+  }
+}
+
+// Update a weight value in barriers_weights_config
+export async function updateBarriersWeight(metricKey: string, newValue: number) {
+  try {
+    console.log(`[v0] Updating BARRIERS weight: ${metricKey} to ${newValue}`)
+
+    const { data: updatedWeight, error: weightError } = await supabaseAdmin
+      .from("barriers_weights_config")
+      .update({
+        weight_value: newValue,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("metric_key", metricKey)
+      .select()
+      .single()
+
+    if (weightError) {
+      console.error("[v0] Error updating barriers_weights_config:", weightError)
+      return { success: false, error: `Failed to update BARRIERS weight: ${weightError.message}` }
+    }
+
+    console.log("[v0] BARRIERS weight updated successfully")
+    return { success: true, data: updatedWeight }
+  } catch (error: any) {
+    console.error("[v0] Exception in updateBarriersWeight:", error)
+    return { success: false, error: error?.message || "Failed to update BARRIERS weight" }
   }
 }

@@ -15,8 +15,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ChevronDown, ChevronUp, Edit2, TrendingUp, AlertCircle, Zap } from "lucide-react"
-import { getUsageWeights, updateWeight, type WeightConfig } from "@/lib/weights-actions"
+import { ChevronDown, ChevronUp, Edit2, TrendingUp, AlertCircle, Zap, MapPin, Shield } from "lucide-react"
+import {
+  getUsageWeights,
+  getAccessWeights,
+  getBarriersWeights,
+  updateWeight,
+  updateAccessWeight,
+  updateBarriersWeight,
+  type WeightConfig,
+} from "@/lib/weights-actions"
 import { ToastContainer, useToast } from "@/components/toast"
 
 type Factor = "USAGE" | "ACCESS" | "BARRIERS"
@@ -29,6 +37,7 @@ const AVAILABLE_FACTORS: {
   color: string
   bgColor: string
   borderColor: string
+  ringColor: string
 }[] = [
   {
     value: "USAGE",
@@ -37,9 +46,29 @@ const AVAILABLE_FACTORS: {
     icon: <Zap className="w-6 h-6" />,
     color: "text-amber-600",
     bgColor: "bg-amber-50",
-    borderColor: "border-amber-200",
+    borderColor: "border-amber-400",
+    ringColor: "ring-amber-300",
   },
-  // ACCESS and BARRIERS will be added in future
+  {
+    value: "ACCESS",
+    label: "ACCESS",
+    description: "Access points and service availability metrics",
+    icon: <MapPin className="w-6 h-6" />,
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
+    borderColor: "border-blue-400",
+    ringColor: "ring-blue-300",
+  },
+  {
+    value: "BARRIERS",
+    label: "BARRIERS",
+    description: "Obstacles and challenges to financial inclusion",
+    icon: <Shield className="w-6 h-6" />,
+    color: "text-rose-600",
+    bgColor: "bg-rose-50",
+    borderColor: "border-rose-400",
+    ringColor: "ring-rose-300",
+  },
 ]
 
 export default function WeightsConfigurationPage() {
@@ -68,13 +97,20 @@ export default function WeightsConfigurationPage() {
   const loadWeights = async () => {
     try {
       setLoading(true)
+      let result
+
       if (selectedFactor === "USAGE") {
-        const result = await getUsageWeights()
-        if (result.success) {
-          setWeights(result.data)
-        } else {
-          showError(result.error || "Failed to load weights")
-        }
+        result = await getUsageWeights()
+      } else if (selectedFactor === "ACCESS") {
+        result = await getAccessWeights()
+      } else if (selectedFactor === "BARRIERS") {
+        result = await getBarriersWeights()
+      }
+
+      if (result?.success) {
+        setWeights(result.data)
+      } else {
+        showError(result?.error || "Failed to load weights")
       }
     } catch (error) {
       console.error("Load weights error:", error)
@@ -101,14 +137,23 @@ export default function WeightsConfigurationPage() {
 
     setUpdating(true)
     try {
-      const result = await updateWeight(editingWeight.metric_key, newValue)
-      if (result.success) {
+      let result
+
+      if (selectedFactor === "USAGE") {
+        result = await updateWeight(editingWeight.metric_key, newValue)
+      } else if (selectedFactor === "ACCESS") {
+        result = await updateAccessWeight(editingWeight.metric_key, newValue)
+      } else if (selectedFactor === "BARRIERS") {
+        result = await updateBarriersWeight(editingWeight.metric_key, newValue)
+      }
+
+      if (result?.success) {
         setWeights(weights.map((w) => (w.id === editingWeight.id ? { ...w, weight_value: newValue } : w)))
         showSuccess(`Weight updated: ${editingWeight.metric_name} = ${newValue}`)
         setShowEditDialog(false)
         setEditingWeight(null)
       } else {
-        showError(result.error || "Failed to update weight")
+        showError(result?.error || "Failed to update weight")
       }
     } catch (error) {
       console.error("Save weight error:", error)
@@ -147,8 +192,9 @@ export default function WeightsConfigurationPage() {
   }
 
   const getCategoryDescription = (category: string) => {
+    const factorName = selectedFactor
     const descriptions: Record<string, string> = {
-      MAIN_FACTOR: "Primary weight for the USAGE measurement system",
+      MAIN_FACTOR: `Primary weight for the ${factorName} measurement system`,
       SUB_FACTOR: "Component weights that make up the main factor",
       KPI: "Key Performance Indicators measuring success outcomes",
       KRI: "Key Risk Indicators measuring potential risks",
@@ -168,6 +214,27 @@ export default function WeightsConfigurationPage() {
 
   const selectedFactorDetails = AVAILABLE_FACTORS.find((f) => f.value === selectedFactor)
 
+  const getBadgeColor = () => {
+    if (selectedFactor === "USAGE") return "bg-amber-100 text-amber-800"
+    if (selectedFactor === "ACCESS") return "bg-blue-100 text-blue-800"
+    if (selectedFactor === "BARRIERS") return "bg-rose-100 text-rose-800"
+    return "bg-slate-100 text-slate-800"
+  }
+
+  const getWeightValueColor = () => {
+    if (selectedFactor === "USAGE") return "text-amber-600"
+    if (selectedFactor === "ACCESS") return "text-blue-600"
+    if (selectedFactor === "BARRIERS") return "text-rose-600"
+    return "text-slate-600"
+  }
+
+  const getButtonColor = () => {
+    if (selectedFactor === "USAGE") return "bg-amber-600 hover:bg-amber-700"
+    if (selectedFactor === "ACCESS") return "bg-blue-600 hover:bg-blue-700"
+    if (selectedFactor === "BARRIERS") return "bg-rose-600 hover:bg-rose-700"
+    return "bg-slate-600 hover:bg-slate-700"
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
@@ -177,7 +244,7 @@ export default function WeightsConfigurationPage() {
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="space-y-2">
             <h1 className="text-4xl font-bold text-slate-900">Weights Configuration</h1>
-            <p className="text-slate-600">Manage weight values for the USAGE measurement system</p>
+            <p className="text-slate-600">Manage weight values for measurement systems</p>
           </div>
         </div>
       </div>
@@ -195,9 +262,9 @@ export default function WeightsConfigurationPage() {
               <button
                 key={factor.value}
                 onClick={() => setSelectedFactor(factor.value)}
-                className={`relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:shadow-lg ${
+                className={`relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:shadow-lg text-left ${
                   selectedFactor === factor.value
-                    ? `${factor.borderColor} ${factor.bgColor} shadow-lg ring-2 ring-offset-2 ring-amber-300`
+                    ? `${factor.borderColor} ${factor.bgColor} shadow-lg ring-2 ring-offset-2 ${factor.ringColor}`
                     : "border-slate-200 bg-white hover:border-slate-300"
                 }`}
               >
@@ -210,15 +277,15 @@ export default function WeightsConfigurationPage() {
                   </div>
 
                   {/* Label */}
-                  <h3 className="text-lg font-bold text-slate-900 text-left mb-2">{factor.label}</h3>
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">{factor.label}</h3>
 
                   {/* Description */}
-                  <p className="text-sm text-slate-600 text-left">{factor.description}</p>
+                  <p className="text-sm text-slate-600">{factor.description}</p>
 
                   {/* Selected indicator */}
                   {selectedFactor === factor.value && (
-                    <div className="mt-4 flex items-center gap-2 text-amber-600 font-medium text-sm">
-                      <div className="w-2 h-2 bg-amber-600 rounded-full"></div>
+                    <div className={`mt-4 flex items-center gap-2 ${factor.color} font-medium text-sm`}>
+                      <div className={`w-2 h-2 rounded-full ${factor.color.replace("text-", "bg-")}`}></div>
                       Selected
                     </div>
                   )}
@@ -226,7 +293,9 @@ export default function WeightsConfigurationPage() {
 
                 {/* Background accent */}
                 {selectedFactor === factor.value && (
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-100 to-transparent opacity-30 -mr-16 -mt-16 rounded-full"></div>
+                  <div
+                    className={`absolute top-0 right-0 w-32 h-32 ${factor.bgColor} opacity-50 -mr-16 -mt-16 rounded-full`}
+                  ></div>
                 )}
               </button>
             ))}
@@ -262,7 +331,9 @@ export default function WeightsConfigurationPage() {
                       <p className="text-sm text-slate-500 mt-1">{getCategoryDescription(category)}</p>
                     </div>
                   </div>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                  <span
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getBadgeColor()}`}
+                  >
                     {categoryWeights.length} items
                   </span>
                 </div>
@@ -289,13 +360,16 @@ export default function WeightsConfigurationPage() {
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="text-right">
-                            <p className="text-2xl font-bold text-blue-600">{weight.weight_value}</p>
+                            <p className={`text-2xl font-bold ${getWeightValueColor()}`}>{weight.weight_value}</p>
                             <p className="text-xs text-slate-500 mt-1">Weight Value</p>
                           </div>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleEditClick(weight)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditClick(weight)
+                            }}
                             className="gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <Edit2 className="w-4 h-4" />
@@ -346,7 +420,7 @@ export default function WeightsConfigurationPage() {
             <Button variant="outline" onClick={() => setShowEditDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveWeight} disabled={updating} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={handleSaveWeight} disabled={updating} className={getButtonColor()}>
               {updating ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
