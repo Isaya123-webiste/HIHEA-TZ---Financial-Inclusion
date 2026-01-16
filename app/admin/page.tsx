@@ -50,25 +50,46 @@ export default function AdminDashboard() {
 
   const fetchFormStats = async () => {
     try {
-      const { data: submitted, error: submittedError } = await supabase
-        .from("form_submissions")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "submitted")
+      const submitResponse = await fetch(
+        `https://dovunpjjaiagtcxmayav.supabase.co/rest/v1/form_submissions?select=id&status=eq.submitted`,
+        {
+          headers: {
+            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""}`,
+          },
+        },
+      )
 
-      const { data: approved, error: approvedError } = await supabase
-        .from("form_submissions")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "approved")
-
-      if (!submittedError && submitted) {
-        setSubmittedForms(submitted.length || 0)
+      if (!submitResponse.ok) {
+        console.warn(`Form submissions fetch returned status ${submitResponse.statusText}`)
+        setSubmittedForms(0)
+      } else {
+        const submitedData = await submitResponse.json()
+        setSubmittedForms(Array.isArray(submitedData) ? submitedData.length : 0)
       }
 
-      if (!approvedError && approved) {
-        setApprovedForms(approved.length || 0)
+      const approveResponse = await fetch(
+        `https://dovunpjjaiagtcxmayav.supabase.co/rest/v1/form_submissions?select=id&status=eq.approved`,
+        {
+          headers: {
+            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""}`,
+          },
+        },
+      )
+
+      if (!approveResponse.ok) {
+        console.warn(`Form approvals fetch returned status ${approveResponse.statusText}`)
+        setApprovedForms(0)
+      } else {
+        const approveData = await approveResponse.json()
+        setApprovedForms(Array.isArray(approveData) ? approveData.length : 0)
       }
     } catch (error) {
       console.error("Error fetching form stats:", error)
+      // Set defaults on error to avoid blocking dashboard
+      setSubmittedForms(0)
+      setApprovedForms(0)
     }
   }
 
@@ -266,34 +287,34 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-4 space-y-4">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-xs text-muted-foreground">
             Welcome back, <span className="font-semibold text-gray-900">{adminProfile?.full_name || "Admin"}</span>!
           </p>
         </div>
-        <div className="text-right text-sm text-gray-600">
+        <div className="text-right text-xs text-gray-600">
           <p className="font-medium">Last updated: Just now</p>
-          <div className="mt-1 w-10 h-10 rounded-full bg-orange-400 flex items-center justify-center text-white font-bold">
+          <div className="mt-1 w-8 h-8 rounded-full bg-orange-400 flex items-center justify-center text-white font-bold text-xs">
             {adminProfile?.full_name ? adminProfile.full_name.charAt(0) : "A"}
           </div>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-4">
         {/* Card 1: Total Users - Black background */}
         <Card className="bg-black border-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white">Total Users</CardTitle>
-            <Users className="h-5 w-5 text-blue-400" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-3">
+            <CardTitle className="text-xs font-medium text-white">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-blue-400" />
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-white">{users.length}</div>
+          <CardContent className="px-3 pb-3">
+            <div className="text-2xl font-bold text-white">{users.length}</div>
             <p className="text-xs text-gray-400">Registered users</p>
-            <div className="mt-2 flex items-center gap-1 text-xs text-green-400 font-semibold">
+            <div className="mt-1 flex items-center gap-1 text-xs text-green-400 font-semibold">
               <span>↑ 12%</span>
               <span className="text-gray-500">vs last month</span>
             </div>
@@ -302,14 +323,14 @@ export default function AdminDashboard() {
 
         {/* Card 2: Total Branches - Blue background */}
         <Card className="bg-[#009EDB] border-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white">Total Branches</CardTitle>
-            <Building2 className="h-5 w-5 text-white" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-3">
+            <CardTitle className="text-xs font-medium text-white">Total Branches</CardTitle>
+            <Building2 className="h-4 w-4 text-white" />
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-white">{branches.length}</div>
+          <CardContent className="px-3 pb-3">
+            <div className="text-2xl font-bold text-white">{branches.length}</div>
             <p className="text-xs text-white/80">Active locations</p>
-            <div className="mt-2 flex items-center gap-1 text-xs text-green-300 font-semibold">
+            <div className="mt-1 flex items-center gap-1 text-xs text-green-300 font-semibold">
               <span>↑ 4.1%</span>
               <span className="text-white/60">vs last month</span>
             </div>
@@ -318,14 +339,14 @@ export default function AdminDashboard() {
 
         {/* Card 3: Forms Submitted by B.R.Os - Black background */}
         <Card className="bg-black border-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white">Forms Submitted</CardTitle>
-            <FileText className="h-5 w-5 text-blue-400" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-3">
+            <CardTitle className="text-xs font-medium text-white">Forms Submitted</CardTitle>
+            <FileText className="h-4 w-4 text-blue-400" />
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-white">{submittedForms}</div>
+          <CardContent className="px-3 pb-3">
+            <div className="text-2xl font-bold text-white">{submittedForms}</div>
             <p className="text-xs text-gray-400">By B.R.Os</p>
-            <div className="mt-2 flex items-center gap-1 text-xs text-red-400 font-semibold">
+            <div className="mt-1 flex items-center gap-1 text-xs text-red-400 font-semibold">
               <span>↓ 2.5%</span>
               <span className="text-gray-500">vs last month</span>
             </div>
@@ -334,14 +355,14 @@ export default function AdminDashboard() {
 
         {/* Card 4: Forms Approved by P.O - Blue background */}
         <Card className="bg-[#009EDB] border-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-white">Forms Approved</CardTitle>
-            <CheckCircle className="h-5 w-5 text-white" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-3">
+            <CardTitle className="text-xs font-medium text-white">Forms Approved</CardTitle>
+            <CheckCircle className="h-4 w-4 text-white" />
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-white">{approvedForms}</div>
+          <CardContent className="px-3 pb-3">
+            <div className="text-2xl font-bold text-white">{approvedForms}</div>
             <p className="text-xs text-white/80">By P.O</p>
-            <div className="mt-2 flex items-center gap-1 text-xs text-green-300 font-semibold">
+            <div className="mt-1 flex items-center gap-1 text-xs text-green-300 font-semibold">
               <span>↑ 8.1%</span>
               <span className="text-white/60">vs last month</span>
             </div>
@@ -349,23 +370,22 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      <div className="flex items-center gap-4 text-sm font-medium">
-        <span className="text-gray-600">Status Range:</span>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-green-500"></div>
+      <div className="flex items-center gap-3 text-xs font-medium py-1">
+        <span className="text-gray-600">Status:</span>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded bg-green-500"></div>
           <span className="text-gray-600">31%-50%</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-yellow-500"></div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded bg-yellow-500"></div>
           <span className="text-gray-600">21%-30%</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded bg-red-500"></div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded bg-red-500"></div>
           <span className="text-gray-600">0%-20%</span>
         </div>
       </div>
 
-      {/* Shared filter controls outside chart components */}
       <FactorsFilterBar
         selectedProjects={selectedProjects}
         setSelectedProjects={setSelectedProjects}
@@ -373,10 +393,10 @@ export default function AdminDashboard() {
         setSelectedBranches={setSelectedBranches}
       />
 
-      {/* Pass filters to Usage chart */}
-      <UsageChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
-
-      <AccessTable selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
+      <div className="space-y-3">
+        <UsageChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
+        <AccessTable selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
+      </div>
 
       {/* Future: Barriers chart will also receive these same filters */}
       {/* <BarriersChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} /> */}

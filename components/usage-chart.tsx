@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { fetchUsageChartData } from "@/lib/usage-display-actions"
 
 interface UsageData {
@@ -20,8 +20,7 @@ interface UsageData {
 
 interface ChartDataPoint {
   category: string
-  value: number
-  projectName: string
+  [key: string]: any
 }
 
 interface UsageChartProps {
@@ -29,11 +28,14 @@ interface UsageChartProps {
   selectedBranches: Set<string>
 }
 
+const PROJECT_COLORS = ["#007AFF", "#FF9500", "#00D4FF", "#FF3B30"]
+
 export default function UsageChart({ selectedProjects, selectedBranches }: UsageChartProps) {
   const [usageData, setUsageData] = useState<UsageData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hoveredBar, setHoveredBar] = useState<string | null>(null)
+  const [projectList, setProjectList] = useState<any[]>([])
 
   useEffect(() => {
     async function fetchData() {
@@ -63,6 +65,7 @@ export default function UsageChart({ selectedProjects, selectedBranches }: Usage
         }))
 
         setUsageData(enrichedData)
+        setProjectList(result.projects || [])
       } catch (err) {
         console.error("Error fetching usage data:", err)
         setError("Failed to load usage data")
@@ -83,34 +86,34 @@ export default function UsageChart({ selectedProjects, selectedBranches }: Usage
 
     const categories = ["INSURANCE", "ACCOUNT", "SAVINGS", "BORROWINGS"]
     return categories.map((category) => {
-      const values = filtered.map((d) => {
-        switch (category) {
-          case "INSURANCE":
-            return d.insurance
-          case "ACCOUNT":
-            return d.account
-          case "SAVINGS":
-            return d.savings
-          case "BORROWINGS":
-            return d.borrowings
-          default:
-            return 0
-        }
+      const dataPoint: ChartDataPoint = { category }
+
+      const uniqueProjects = [...new Set(filtered.map((d) => d.projectId))]
+      uniqueProjects.forEach((projectId, projectIndex) => {
+        const projectData = filtered.filter((d) => d.projectId === projectId)
+        const projectName = projectData[0].projectName
+
+        const values = projectData.map((d) => {
+          switch (category) {
+            case "INSURANCE":
+              return d.insurance
+            case "ACCOUNT":
+              return d.account
+            case "SAVINGS":
+              return d.savings
+            case "BORROWINGS":
+              return d.borrowings
+            default:
+              return 0
+          }
+        })
+        const avgValue = values.reduce((a, b) => a + b, 0) / values.length
+        dataPoint[`${projectName}-${projectId}`] = Math.min(avgValue, 100)
       })
-      const avgValue = values.reduce((a, b) => a + b, 0) / values.length
-      return {
-        category,
-        value: Math.min(avgValue, 100),
-        projectName: filtered[0].projectName,
-      }
+
+      return dataPoint
     })
   }, [usageData, selectedBranches, selectedProjects])
-
-  const getBarColor = (value: number) => {
-    if (value >= 31) return "#22c55e" // green
-    if (value >= 21) return "#eab308" // yellow
-    return "#ef4444" // red
-  }
 
   const avgUsageActualData = useMemo(() => {
     const filtered = usageData.filter(
@@ -121,21 +124,32 @@ export default function UsageChart({ selectedProjects, selectedBranches }: Usage
     return (sum / filtered.length).toFixed(2)
   }, [usageData, selectedBranches, selectedProjects])
 
+  const uniqueProjects = useMemo(() => {
+    const filtered = usageData.filter(
+      (item) => selectedBranches.has(item.branchId) && selectedProjects.has(item.projectId),
+    )
+    return [...new Set(filtered.map((d) => d.projectId))]
+  }, [usageData, selectedBranches, selectedProjects])
+
   if (loading) {
     return (
-      <Card className="border-0 shadow-lg overflow-hidden">
-        <CardHeader className="bg-[#009EDB] pb-6">
-          <div>
-            <CardTitle className="text-2xl font-bold text-white">Usage Actual Data (X):</CardTitle>
-            <div className="flex items-baseline gap-2 mt-2">
-              <span className="text-white/90 text-sm">Usage:</span>
+      <Card className="border border-[#D1D5DB] shadow-sm overflow-hidden">
+        <CardHeader className="bg-white pb-4 border-b border-[#D1D5DB]">
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="text-3xl font-bold text-gray-900">{avgUsageActualData}%</CardTitle>
+              <p className="text-sm text-gray-600 mt-1">Usage</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+              <span className="text-xs font-semibold text-gray-700">Usage</span>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="flex items-center justify-center h-96 bg-white">
+        <CardContent className="flex items-center justify-center h-64 bg-white">
           <div className="text-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#009EDB] border-t-transparent mx-auto"></div>
-            <p className="mt-4 text-[#009EDB] font-semibold">Loading usage data...</p>
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent mx-auto"></div>
+            <p className="mt-2 text-blue-600 font-semibold text-sm">Loading usage data...</p>
           </div>
         </CardContent>
       </Card>
@@ -144,69 +158,61 @@ export default function UsageChart({ selectedProjects, selectedBranches }: Usage
 
   if (error) {
     return (
-      <Card className="border-0 shadow-lg overflow-hidden">
-        <CardHeader className="bg-[#009EDB] pb-6">
-          <CardTitle className="text-2xl font-bold text-white">Usage Actual Data (X):</CardTitle>
+      <Card className="border border-[#D1D5DB] shadow-sm overflow-hidden">
+        <CardHeader className="bg-white pb-4 border-b border-[#D1D5DB]">
+          <CardTitle className="text-xl font-bold text-gray-900">Usage</CardTitle>
         </CardHeader>
         <CardContent className="bg-white">
-          <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 text-red-700 font-semibold">{error}</div>
+          <div className="bg-red-50 border border-red-300 rounded p-3 text-red-700 text-sm font-semibold">{error}</div>
         </CardContent>
       </Card>
     )
   }
 
   return (
-    <Card className="border-0 shadow-lg overflow-hidden">
-      <CardHeader className="bg-[#009EDB] pb-6">
+    <Card className="border border-[#D1D5DB] shadow-sm overflow-hidden">
+      <CardHeader className="bg-white pb-4 border-b border-[#D1D5DB]">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-5xl font-bold text-white">{avgUsageActualData}%</CardTitle>
+            <CardTitle className="text-3xl font-bold text-gray-900">{avgUsageActualData}%</CardTitle>
+            <p className="text-sm text-gray-600 mt-1">Usage</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-3 h-3 rounded-sm bg-white"></div>
-            <span className="text-white text-lg font-bold">Usage</span>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+            <span className="text-xs font-semibold text-gray-700">Usage</span>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-8 bg-[#009EDB]">
+      <CardContent className="pt-4 bg-white">
         {chartData.length > 0 ? (
-          <div className="w-full h-96">
+          <div className="w-full h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 60, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="0" stroke="#ffffff" vertical={false} />
+              <BarChart data={chartData} margin={{ top: 10, right: 20, left: 40, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
                 <XAxis
                   dataKey="category"
-                  tick={{ fill: "#ffffff", fontSize: 13, fontWeight: 600 }}
-                  axisLine={{ stroke: "#ffffff" }}
+                  tick={{ fill: "#374151", fontSize: 12, fontWeight: 500 }}
+                  axisLine={{ stroke: "#D1D5DB" }}
                 />
                 <YAxis
-                  label={{
-                    value: "Usage (%)",
-                    angle: -90,
-                    position: "insideLeft",
-                    style: { fill: "#ffffff", fontWeight: 600, fontSize: 12 },
-                  }}
                   domain={[0, 100]}
-                  ticks={[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
-                  tick={{ fill: "#ffffff", fontSize: 12 }}
-                  axisLine={{ stroke: "#ffffff" }}
+                  ticks={[0, 20, 40, 60, 80, 100]}
+                  tick={{ fill: "#6B7280", fontSize: 11 }}
+                  axisLine={{ stroke: "#D1D5DB" }}
                 />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#000000",
                     border: "none",
                     borderRadius: "6px",
-                    padding: "10px 14px",
-                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                    padding: "8px 12px",
                   }}
                   content={({ active, payload }) => {
                     if (active && payload && payload[0]) {
-                      const data = payload[0].payload as ChartDataPoint
                       return (
-                        <div className="bg-black text-white px-3 py-2 rounded-md text-sm">
-                          <p className="font-semibold">{data.projectName}</p>
-                          <p className="text-white/90">{data.category}</p>
+                        <div className="bg-black text-white px-3 py-2 rounded text-xs">
+                          <p className="text-gray-300">{payload[0].dataKey?.toString().split("-")[0]}</p>
                           <p className="text-white font-bold">{(payload[0].value as number).toFixed(2)}%</p>
                         </div>
                       )
@@ -215,37 +221,36 @@ export default function UsageChart({ selectedProjects, selectedBranches }: Usage
                   }}
                   cursor={false}
                 />
-                <Bar
-                  dataKey="value"
-                  radius={[8, 8, 0, 0]}
-                  label={{
-                    position: "top",
-                    fill: "#ffffff",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    formatter: (value: number) => `${value.toFixed(2)}%`,
-                  }}
-                  onMouseEnter={(data, index) => setHoveredBar(`bar-${index}`)}
-                  onMouseLeave={() => setHoveredBar(null)}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={hoveredBar === `bar-${index}` ? "#A61E22" : getBarColor(entry.value)}
-                      style={{
-                        transition: "fill 0.2s ease-in-out",
-                        cursor: "pointer",
+                {uniqueProjects.map((projectId, projectIndex) => {
+                  const projectData = usageData.find((d) => d.projectId === projectId)
+                  const projectName = projectData?.projectName || "Unknown"
+                  const barKey = `${projectName}-${projectId}`
+
+                  return (
+                    <Bar
+                      key={barKey}
+                      dataKey={barKey}
+                      fill={PROJECT_COLORS[projectIndex % PROJECT_COLORS.length]}
+                      radius={[4, 4, 0, 0]}
+                      label={{
+                        position: "top",
+                        fill: "#374151",
+                        fontSize: 10,
+                        fontWeight: 600,
+                        formatter: (value: number) => `${(value || 0).toFixed(0)}%`,
                       }}
+                      onMouseEnter={() => setHoveredBar(barKey)}
+                      onMouseLeave={() => setHoveredBar(null)}
                     />
-                  ))}
-                </Bar>
+                  )
+                })}
               </BarChart>
             </ResponsiveContainer>
           </div>
         ) : (
-          <div className="text-center py-16">
-            <p className="text-white font-semibold text-lg">No usage data available</p>
-            <p className="text-white/70 text-sm mt-2">Try adjusting your project or branch selection</p>
+          <div className="text-center py-8">
+            <p className="text-gray-700 font-semibold text-sm">No usage data available</p>
+            <p className="text-gray-500 text-xs mt-1">Try adjusting your filters</p>
           </div>
         )}
       </CardContent>

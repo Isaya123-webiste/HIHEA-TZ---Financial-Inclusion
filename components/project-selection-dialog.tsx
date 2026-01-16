@@ -3,16 +3,22 @@
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { getProjects, type Project } from "@/lib/projects-actions"
-import { AlertCircle } from 'lucide-react'
+import { getProjects, getProjectsByBranch, type Project } from "@/lib/projects-actions"
+import { AlertCircle } from "lucide-react"
 
 interface ProjectSelectionDialogProps {
   isOpen: boolean
   onClose: () => void
   onSelectProject: (projectId: string) => void
+  branchId?: string
 }
 
-export default function ProjectSelectionDialog({ isOpen, onClose, onSelectProject }: ProjectSelectionDialogProps) {
+export default function ProjectSelectionDialog({
+  isOpen,
+  onClose,
+  onSelectProject,
+  branchId,
+}: ProjectSelectionDialogProps) {
   const [projects, setProjects] = useState<Project[]>([])
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -22,13 +28,14 @@ export default function ProjectSelectionDialog({ isOpen, onClose, onSelectProjec
     if (isOpen) {
       loadProjects()
     }
-  }, [isOpen])
+  }, [isOpen, branchId])
 
   const loadProjects = async () => {
     setLoading(true)
     setError(null)
     try {
-      const result = await getProjects()
+      const result = branchId ? await getProjectsByBranch(branchId) : await getProjects()
+
       if (result.success && result.data) {
         setProjects(result.data)
       } else {
@@ -78,6 +85,14 @@ export default function ProjectSelectionDialog({ isOpen, onClose, onSelectProjec
             <p className="text-red-600">{error}</p>
             <Button onClick={loadProjects} style={{ backgroundColor: "#009edb" }}>
               Retry
+            </Button>
+          </div>
+        ) : projects.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 space-y-4">
+            <AlertCircle className="h-12 w-12 text-yellow-500" />
+            <p className="text-yellow-600">No projects available for your branch.</p>
+            <Button onClick={loadProjects} style={{ backgroundColor: "#009edb" }}>
+              Refresh
             </Button>
           </div>
         ) : (

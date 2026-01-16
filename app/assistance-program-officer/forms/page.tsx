@@ -91,7 +91,7 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
         money_fraud: form.money_fraud || 0,
         trust_erosion: form.trust_erosion || "",
         documentation_delay: form.documentation_delay || "",
-        loan_cost_high: form.loan_cost_high || "",
+        loan_cost_high: form.loan_cost_high || 0,
         explain_barriers: form.explain_barriers || "",
         number_of_groups: form.number_of_groups || 0,
         members_at_start: form.members_at_start || 0,
@@ -499,12 +499,14 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
 
             <div>
               <Label htmlFor="loan_cost_high">Loan cost-high? Ask members.</Label>
-              <Textarea
+              <Input
+                type="number"
                 id="loan_cost_high"
                 value={formData.loan_cost_high || ""}
                 onChange={(e) => setFormData({ ...formData, loan_cost_high: e.target.value })}
-                placeholder="Ask members if loan costs are high and provide their feedback"
-                rows={4}
+                placeholder="0"
+                min="0"
+                className="w-full"
               />
             </div>
 

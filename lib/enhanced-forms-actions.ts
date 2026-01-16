@@ -45,7 +45,7 @@ export interface FormSubmission {
   money_fraud?: number
   trust_erosion?: string
   documentation_delay?: string
-  loan_cost_high?: string
+  loan_cost_high?: number // Changed from string to number
   explain_barriers?: string
   number_of_groups?: number
   members_at_start?: number
@@ -88,7 +88,7 @@ function extractFormFields(formData: any): any {
     money_fraud: formData.money_fraud || 0,
     trust_erosion: formData.trust_erosion || null,
     documentation_delay: formData.documentation_delay || null,
-    loan_cost_high: formData.loan_cost_high || null,
+    loan_cost_high: formData.loan_cost_high || 0, // Changed from string to number
     explain_barriers: formData.explain_barriers || null,
     number_of_groups: formData.number_of_groups || 0,
     members_at_start: formData.members_at_start || 0,

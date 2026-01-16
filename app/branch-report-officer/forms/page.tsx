@@ -239,13 +239,12 @@ export default function BranchReportOfficerForms() {
       placeholder: "Describe loan uses for members with 3 value chain activities",
     },
     {
-      id: "loan_default",
-      name: "loan_default",
-      label: "Loan on default",
-      type: "currency",
-      required: true,
-      placeholder: "0",
-      description: "Amount in Tanzanian Shillings (TZS)",
+      id: "loan_cost_high",
+      name: "loan_cost_high",
+      label: "Loan cost-high? Ask members.",
+      type: "number", // Changed from "textarea" to "number"
+      required: false,
+      placeholder: "0", // Changed placeholder to reflect numeric input
     },
     {
       id: "loan_delinquency",
@@ -292,9 +291,9 @@ export default function BranchReportOfficerForms() {
       id: "loan_cost_high",
       name: "loan_cost_high",
       label: "Loan cost-high? Ask members.",
-      type: "textarea",
+      type: "number", // Changed from "textarea" to "number"
       required: false,
-      placeholder: "Ask members if loan costs are high",
+      placeholder: "0", // Changed placeholder to reflect numeric input
     },
     {
       id: "explain_barriers",
@@ -1083,6 +1082,7 @@ export default function BranchReportOfficerForms() {
         isOpen={showProjectSelection}
         onClose={() => setShowProjectSelection(false)}
         onSelectProject={handleProjectSelected}
+        branchId={profile?.branch_id}
       />
 
       {/* Form Dialog */}
