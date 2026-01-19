@@ -779,20 +779,72 @@ export async function sendFormBack(formId: string, programOfficerId: string, rea
 // Update form by program officer
 export async function updateFormByProgramOfficer(formId: string, programOfficerId: string, formData: any) {
   try {
-    console.log("Program officer updating form:", formId)
+    console.log("[v0] Program officer updating form:", formId)
+    console.log("[v0] Form data received:", formData)
 
     if (!formId || !programOfficerId) {
       return { success: false, error: "Form ID and Program Officer ID are required" }
     }
 
+    // First, fetch the form to check its status and get branch/project info
+    const { data: currentForm, error: fetchError } = await supabaseAdmin
+      .from("form_submissions")
+      .select("id, status, branch_id, project_id, form_data")
+      .eq("id", formId)
+      .single()
+
+    if (fetchError || !currentForm) {
+      console.error("Error fetching form for update:", fetchError)
+      return { success: false, error: `Failed to fetch form: ${fetchError?.message || "Form not found"}` }
+    }
+
+    console.log("[v0] Current form status:", currentForm.status)
+    console.log("[v0] Current form data before update:", currentForm.form_data)
+
+    // Prepare update data with all extracted fields (same as submitForm)
     const updateData = {
       form_data: formData,
       updated_at: new Date().toISOString(),
       group_name: formData.group_name || null,
       location: formData.location || null,
       notes: formData.notes || null,
+      // Extract date fields from formData
+      date_loan_applied: formData.date_loan_applied || null,
+      date_loan_received: formData.date_loan_received || null,
+      // Extract numeric fields from formData - FIX: Don't use falsy check for numbers, use typeof check
+      num_mfis: typeof formData.num_mfis === "number" ? formData.num_mfis : parseInt(formData.num_mfis) || 0,
+      groups_bank_account: typeof formData.groups_bank_account === "number" ? formData.groups_bank_account : parseInt(formData.groups_bank_account) || 0,
+      members_bank_account: typeof formData.members_bank_account === "number" ? formData.members_bank_account : parseInt(formData.members_bank_account) || 0,
+      inactive_accounts: typeof formData.inactive_accounts === "number" ? formData.inactive_accounts : parseInt(formData.inactive_accounts) || 0,
+      num_insurers: typeof formData.num_insurers === "number" ? formData.num_insurers : parseInt(formData.num_insurers) || 0,
+      members_insurance: typeof formData.members_insurance === "number" ? formData.members_insurance : parseInt(formData.members_insurance) || 0,
+      borrowed_groups: typeof formData.borrowed_groups === "number" ? formData.borrowed_groups : parseInt(formData.borrowed_groups) || 0,
+      members_applying_loans: typeof formData.members_applying_loans === "number" ? formData.members_applying_loans : parseInt(formData.members_applying_loans) || 0,
+      loan_amount_applied: typeof formData.loan_amount_applied === "number" ? formData.loan_amount_applied : parseFloat(formData.loan_amount_applied) || 0,
+      loan_amount_approved: typeof formData.loan_amount_approved === "number" ? formData.loan_amount_approved : parseFloat(formData.loan_amount_approved) || 0,
+      members_received_loans: typeof formData.members_received_loans === "number" ? formData.members_received_loans : parseInt(formData.members_received_loans) || 0,
+      members_complaining_delay: typeof formData.members_complaining_delay === "number" ? formData.members_complaining_delay : parseInt(formData.members_complaining_delay) || 0,
+      loan_default: typeof formData.loan_default === "number" ? formData.loan_default : parseFloat(formData.loan_default) || 0,
+      loan_delinquency: typeof formData.loan_delinquency === "number" ? formData.loan_delinquency : parseFloat(formData.loan_delinquency) || 0,
+      loan_dropout: typeof formData.loan_dropout === "number" ? formData.loan_dropout : parseInt(formData.loan_dropout) || 0,
+      money_fraud: typeof formData.money_fraud === "number" ? formData.money_fraud : parseInt(formData.money_fraud) || 0,
+      number_of_groups: typeof formData.number_of_groups === "number" ? formData.number_of_groups : parseInt(formData.number_of_groups) || 0,
+      members_at_start: typeof formData.members_at_start === "number" ? formData.members_at_start : parseInt(formData.members_at_start) || 0,
+      members_at_end: typeof formData.members_at_end === "number" ? formData.members_at_end : parseInt(formData.members_at_end) || 0,
+      bros_at_start: typeof formData.bros_at_start === "number" ? formData.bros_at_start : parseInt(formData.bros_at_start) || 0,
+      bros_at_end: typeof formData.bros_at_end === "number" ? formData.bros_at_end : parseInt(formData.bros_at_end) || 0,
+      credit_sources: formData.credit_sources || null,
+      loan_uses: formData.loan_uses || null,
+      trust_erosion: formData.trust_erosion || null,
+      documentation_delay: formData.documentation_delay || null,
+      loan_cost_high: typeof formData.loan_cost_high === "number" ? formData.loan_cost_high : parseInt(formData.loan_cost_high) || 0,
+      explain_barriers: formData.explain_barriers || null,
     }
 
+    console.log("[v0] Update data to be saved:", updateData)
+    console.log("[v0] loan_default value being saved:", updateData.loan_default)
+
+    // Update the form submission
     const { data, error } = await supabaseAdmin
       .from("form_submissions")
       .update(updateData)
@@ -805,7 +857,94 @@ export async function updateFormByProgramOfficer(formId: string, programOfficerI
       return { success: false, error: `Failed to update form: ${error.message}` }
     }
 
-    console.log("Form updated successfully by program officer")
+    console.log("[v0] Form updated successfully:", data)
+
+    // If the form is approved, recalculate branch_reports for this branch-project combo
+    if (currentForm.status === "approved" && currentForm.branch_id && currentForm.project_id) {
+      console.log("[v0] Form is approved, recalculating branch report for branch:", currentForm.branch_id, "project:", currentForm.project_id)
+
+      try {
+        // Fetch all approved forms for this specific branch-project combination
+        const { data: approvedForms, error: formsError } = await supabaseAdmin
+          .from("form_submissions")
+          .select(
+            "num_mfis, groups_bank_account, members_bank_account, inactive_accounts, num_insurers, members_insurance, borrowed_groups, members_applying_loans, loan_amount_applied, loan_amount_approved, members_received_loans, members_complaining_delay, loan_default, loan_delinquency, loan_dropout, money_fraud, number_of_groups, members_at_start, members_at_end, bros_at_start, bros_at_end"
+          )
+          .eq("branch_id", currentForm.branch_id)
+          .eq("project_id", currentForm.project_id)
+          .eq("status", "approved")
+
+        if (formsError) {
+          console.warn("Warning: Could not fetch approved forms for recalculation:", formsError.message)
+        } else if (approvedForms && approvedForms.length > 0) {
+          console.log("[v0] Found", approvedForms.length, "approved forms for this branch-project")
+
+          // Define numeric fields to aggregate
+          const numericFields = [
+            "num_mfis",
+            "groups_bank_account",
+            "members_bank_account",
+            "inactive_accounts",
+            "num_insurers",
+            "members_insurance",
+            "borrowed_groups",
+            "members_applying_loans",
+            "loan_amount_applied",
+            "loan_amount_approved",
+            "members_received_loans",
+            "members_complaining_delay",
+            "loan_default",
+            "loan_delinquency",
+            "loan_dropout",
+            "money_fraud",
+            "number_of_groups",
+            "members_at_start",
+            "members_at_end",
+            "bros_at_start",
+            "bros_at_end",
+          ]
+
+          // Recalculate aggregates by summing all approved forms
+          const aggregateUpdates: any = { updated_at: new Date().toISOString() }
+
+          numericFields.forEach((field) => {
+            const total = approvedForms.reduce((sum, form) => {
+              const value = form[field as keyof typeof form]
+              return sum + (value ? parseFloat(String(value)) : 0)
+            }, 0)
+            aggregateUpdates[field] = total
+            console.log(`[v0] Aggregate ${field} = ${total}`)
+          })
+
+          // Find and update the branch_reports record for this branch-project combo
+          const { data: branchReport, error: fetchError } = await supabaseAdmin
+            .from("branch_reports")
+            .select("id")
+            .eq("branch_id", currentForm.branch_id)
+            .eq("project_id", currentForm.project_id)
+            .maybeSingle()
+
+          if (fetchError) {
+            console.warn("Warning: Could not fetch branch report:", fetchError.message)
+          } else if (branchReport) {
+            const { error: updateError } = await supabaseAdmin
+              .from("branch_reports")
+              .update(aggregateUpdates)
+              .eq("id", branchReport.id)
+
+            if (updateError) {
+              console.warn("Warning: Failed to update branch report:", updateError.message)
+            } else {
+              console.log("[v0] Branch report recalculated and updated successfully for project:", currentForm.project_id)
+            }
+          }
+        }
+      } catch (aggregationError) {
+        console.warn("Warning: Error during branch report recalculation:", aggregationError)
+        // Don't fail the form update if branch report update fails
+      }
+    }
+
     revalidatePath("/program-officer/forms")
     return { success: true, data }
   } catch (error) {
