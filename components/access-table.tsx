@@ -28,7 +28,7 @@ interface AccessTableProps {
   selectedBranches: Set<string>
 }
 
-const PROJECT_COLORS = ["#007AFF", "#FF9500", "#00D4FF", "#FF3B30"]
+const PROJECT_COLORS = ["#8B5CF6", "#06B6D4", "#4338CA"]
 
 export default function AccessTable({ selectedProjects, selectedBranches }: AccessTableProps) {
   const [accessData, setAccessData] = useState<AccessData[]>([])

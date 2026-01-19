@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Shield, Users, Building2, FileText, CheckCircle } from "lucide-react"
+import { Shield } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 import { getAllUsers, getAllBranches, getUserProfileSimple } from "@/lib/admin-actions"
 import { debugAdminUser, fixAdminRole } from "@/lib/debug-admin"
@@ -287,119 +286,127 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-800">
       {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-xs text-muted-foreground">
-            Welcome back, <span className="font-semibold text-gray-900">{adminProfile?.full_name || "Admin"}</span>!
-          </p>
-        </div>
-        <div className="text-right text-xs text-gray-600">
-          <p className="font-medium">Last updated: Just now</p>
-          <div className="mt-1 w-8 h-8 rounded-full bg-orange-400 flex items-center justify-center text-white font-bold text-xs">
-            {adminProfile?.full_name ? adminProfile.full_name.charAt(0) : "A"}
+      <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-700">
+        <div className="max-w-[1600px] mx-auto px-6 h-20 flex items-center justify-between">
+          <div>
+            <h2 className="font-bold text-lg text-slate-800 dark:text-white">Analytics Overview</h2>
+          </div>
+          <div className="flex items-center gap-4">
+            <button className="p-2.5 text-slate-500 hover:bg-slate-100 rounded-full transition-colors dark:text-white dark:hover:bg-slate-900">
+              <span className="material-symbols-outlined">dark_mode</span>
+            </button>
+            <div className="h-8 w-px bg-slate-200 dark:bg-slate-700"></div>
+            <div className="flex items-center gap-3">
+              <div className="text-right hidden sm:block">
+                <p className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                  Administrator
+                </p>
+                <p className="text-sm font-bold text-slate-700 dark:text-white">
+                  {adminProfile?.full_name || "Admin User"}
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center text-white font-black text-base shadow-lg shadow-indigo-500/20 dark:shadow-indigo-400/20">
+                {adminProfile?.full_name ? adminProfile.full_name.charAt(0) : "A"}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="grid gap-3 md:grid-cols-4">
-        {/* Card 1: Total Users - Black background */}
-        <Card className="bg-black border-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-3">
-            <CardTitle className="text-xs font-medium text-white">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-blue-400" />
-          </CardHeader>
-          <CardContent className="px-3 pb-3">
-            <div className="text-2xl font-bold text-white">{users.length}</div>
-            <p className="text-xs text-gray-400">Registered users</p>
-            <div className="mt-1 flex items-center gap-1 text-xs text-green-400 font-semibold">
-              <span>↑ 12%</span>
-              <span className="text-gray-500">vs last month</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 2: Total Branches - Blue background */}
-        <Card className="bg-[#009EDB] border-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-3">
-            <CardTitle className="text-xs font-medium text-white">Total Branches</CardTitle>
-            <Building2 className="h-4 w-4 text-white" />
-          </CardHeader>
-          <CardContent className="px-3 pb-3">
-            <div className="text-2xl font-bold text-white">{branches.length}</div>
-            <p className="text-xs text-white/80">Active locations</p>
-            <div className="mt-1 flex items-center gap-1 text-xs text-green-300 font-semibold">
-              <span>↑ 4.1%</span>
-              <span className="text-white/60">vs last month</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 3: Forms Submitted by B.R.Os - Black background */}
-        <Card className="bg-black border-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-3">
-            <CardTitle className="text-xs font-medium text-white">Forms Submitted</CardTitle>
-            <FileText className="h-4 w-4 text-blue-400" />
-          </CardHeader>
-          <CardContent className="px-3 pb-3">
-            <div className="text-2xl font-bold text-white">{submittedForms}</div>
-            <p className="text-xs text-gray-400">By B.R.Os</p>
-            <div className="mt-1 flex items-center gap-1 text-xs text-red-400 font-semibold">
-              <span>↓ 2.5%</span>
-              <span className="text-gray-500">vs last month</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Card 4: Forms Approved by P.O - Blue background */}
-        <Card className="bg-[#009EDB] border-0">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-3 px-3">
-            <CardTitle className="text-xs font-medium text-white">Forms Approved</CardTitle>
-            <CheckCircle className="h-4 w-4 text-white" />
-          </CardHeader>
-          <CardContent className="px-3 pb-3">
-            <div className="text-2xl font-bold text-white">{approvedForms}</div>
-            <p className="text-xs text-white/80">By P.O</p>
-            <div className="mt-1 flex items-center gap-1 text-xs text-green-300 font-semibold">
-              <span>↑ 8.1%</span>
-              <span className="text-white/60">vs last month</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="flex items-center gap-3 text-xs font-medium py-1">
-        <span className="text-gray-600">Status:</span>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded bg-green-500"></div>
-          <span className="text-gray-600">31%-50%</span>
+      <main className="max-w-[1600px] mx-auto p-6 lg:p-10">
+        {/* Title Section */}
+        <div className="mb-10">
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            Project Analytics Performance
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">
+            Monitoring project delivery against standardized performance benchmarks.
+          </p>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded bg-yellow-500"></div>
-          <span className="text-gray-600">21%-30%</span>
+
+        {/* Metrics Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          {/* Card 1: Total Users */}
+          <div className="bg-slate-950 dark:bg-slate-900 text-white p-6 rounded-2xl shadow-xl border border-slate-800 dark:border-slate-700 relative overflow-hidden group">
+            <div className="relative z-10">
+              <div className="flex justify-between items-start mb-4">
+                <span className="text-slate-400 font-semibold text-xs uppercase tracking-wider">Total Users</span>
+                <span className="material-symbols-outlined text-slate-400 text-2xl">groups</span>
+              </div>
+              <div className="text-4xl font-extrabold mb-1">{users.length.toLocaleString()}</div>
+              <p className="text-slate-400 dark:text-slate-500 text-sm mb-4 font-medium">Registered users</p>
+              <div className="flex items-center gap-1 text-green-400 dark:text-green-500 text-sm font-bold">
+                <span className="material-symbols-outlined text-xs">arrow_upward</span>
+                12% <span className="font-normal text-slate-500 dark:text-slate-400 ml-1">vs last month</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Active Projects */}
+          <div className="bg-cyan-500 dark:bg-cyan-600 p-6 rounded-2xl shadow-xl shadow-cyan-500/30 dark:shadow-cyan-600/30 text-white relative overflow-hidden">
+            <div className="relative z-10">
+              <div className="flex justify-between items-start mb-4">
+                <span className="text-white/80 font-semibold text-xs uppercase tracking-wider">Active Projects</span>
+                <span className="material-symbols-outlined text-white text-2xl">account_tree</span>
+              </div>
+              <div className="text-4xl font-extrabold mb-1">{branches.length}</div>
+              <p className="text-white/70 dark:text-white/80 text-sm mb-4 font-medium">Current initiatives</p>
+              <div className="flex items-center gap-1 text-white dark:text-slate-300 text-sm font-bold">
+                <span className="material-symbols-outlined text-xs text-white/90 dark:text-slate-400">
+                  arrow_upward
+                </span>
+                4.1% <span className="font-normal text-white/70 dark:text-slate-400 ml-1">vs last month</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Forms Submitted */}
+          <div className="bg-slate-950 dark:bg-slate-900 text-white p-6 rounded-2xl shadow-xl border border-slate-800 dark:border-slate-700">
+            <div className="flex justify-between items-start mb-4">
+              <span className="text-slate-400 font-semibold text-xs uppercase tracking-wider">Forms Submitted</span>
+              <span className="material-symbols-outlined text-slate-400 text-2xl">description</span>
+            </div>
+            <div className="text-4xl font-extrabold mb-1">{submittedForms.toLocaleString()}</div>
+            <p className="text-slate-400 dark:text-slate-500 text-sm mb-4 font-medium">By Project Officers</p>
+            <div className="flex items-center gap-1 text-red-400 dark:text-red-500 text-sm font-bold">
+              <span className="material-symbols-outlined text-xs">arrow_downward</span>
+              2.5% <span className="font-normal text-slate-500 dark:text-slate-400 ml-1">vs last month</span>
+            </div>
+          </div>
+
+          {/* Card 4: Forms Approved */}
+          <div className="bg-cyan-500 dark:bg-cyan-600 p-6 rounded-2xl shadow-xl shadow-cyan-500/30 dark:shadow-cyan-600/30 text-white">
+            <div className="flex justify-between items-start mb-4">
+              <span className="text-white/80 font-semibold text-xs uppercase tracking-wider">Forms Approved</span>
+              <span className="material-symbols-outlined text-white text-2xl">verified</span>
+            </div>
+            <div className="text-4xl font-extrabold mb-1">{approvedForms.toLocaleString()}</div>
+            <p className="text-white/70 dark:text-white/80 text-sm mb-4 font-medium">Aggregate Average</p>
+            <div className="flex items-center gap-1 text-white dark:text-slate-300 text-sm font-bold">
+              <span className="material-symbols-outlined text-xs text-white/90 dark:text-slate-400">arrow_upward</span>
+              8.1% <span className="font-normal text-white/70 dark:text-slate-400 ml-1">vs last month</span>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded bg-red-500"></div>
-          <span className="text-gray-600">0%-20%</span>
+
+        {/* Filters and Status Legend */}
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 mb-8">
+          <FactorsFilterBar
+            selectedProjects={selectedProjects}
+            setSelectedProjects={setSelectedProjects}
+            selectedBranches={selectedBranches}
+            setSelectedBranches={setSelectedBranches}
+          />
         </div>
-      </div>
 
-      <FactorsFilterBar
-        selectedProjects={selectedProjects}
-        setSelectedProjects={setSelectedProjects}
-        selectedBranches={selectedBranches}
-        setSelectedBranches={setSelectedBranches}
-      />
-
-      <div className="space-y-3">
-        <UsageChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
-        <AccessTable selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
-      </div>
-
-      {/* Future: Barriers chart will also receive these same filters */}
-      {/* <BarriersChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} /> */}
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 gap-8">
+          <UsageChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
+          <AccessTable selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
+        </div>
+      </main>
     </div>
   )
 }

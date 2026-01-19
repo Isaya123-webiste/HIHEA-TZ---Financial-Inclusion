@@ -1,17 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { ChevronDown, Filter } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
+import { useTheme } from "next-themes"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { fetchUsageChartData } from "@/lib/usage-display-actions"
 
 interface FactorsFilterBarProps {
@@ -30,6 +21,7 @@ export default function FactorsFilterBar({
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
+  const { theme } = useTheme()
 
   useEffect(() => {
     async function loadFilters() {
@@ -39,9 +31,10 @@ export default function FactorsFilterBar({
           setProjects(result.projects || [])
           setBranches(result.branches || [])
 
-          // Initialize with all selected
-          setSelectedProjects(new Set((result.projects || []).map((p: any) => p.id)))
-          setSelectedBranches(new Set((result.branches || []).map((b: any) => b.id)))
+          const firstBranch = result.branches?.[0]?.id
+          const firstProject = result.projects?.[0]?.id
+          if (firstBranch) setSelectedBranches(new Set([firstBranch]))
+          if (firstProject) setSelectedProjects(new Set([firstProject]))
         }
       } finally {
         setLoading(false)
@@ -50,134 +43,80 @@ export default function FactorsFilterBar({
     loadFilters()
   }, [setSelectedProjects, setSelectedBranches])
 
-  const handleProjectToggle = (projectId: string) => {
-    const newSelected = new Set(selectedProjects)
-    if (newSelected.has(projectId)) {
-      newSelected.delete(projectId)
-    } else {
-      newSelected.add(projectId)
-    }
-    setSelectedProjects(newSelected)
-  }
-
-  const handleBranchToggle = (branchId: string) => {
-    const newSelected = new Set(selectedBranches)
-    if (newSelected.has(branchId)) {
-      newSelected.delete(branchId)
-    } else {
-      newSelected.add(branchId)
-    }
-    setSelectedBranches(newSelected)
-  }
-
-  const handleSelectAllProjects = () => {
-    if (selectedProjects.size === projects.length) {
-      setSelectedProjects(new Set())
-    } else {
-      setSelectedProjects(new Set(projects.map((p) => p.id)))
-    }
-  }
-
-  const handleSelectAllBranches = () => {
-    if (selectedBranches.size === branches.length) {
-      setSelectedBranches(new Set())
-    } else {
-      setSelectedBranches(new Set(branches.map((b) => b.id)))
-    }
-  }
-
   if (loading) return null
 
   return (
-    <Card className="border-0 shadow-md bg-gradient-to-r from-slate-50 to-blue-50">
-      <CardContent className="pt-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <Filter className="h-4 w-4" />
-            Filters for All Factors
+    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-6">
+      <div className="flex items-center justify-between gap-8">
+        {/* Left: Filter Icon and Title */}
+        <div className="flex items-center gap-3">
+          <span className="material-symbols-outlined text-slate-600 dark:text-slate-400 text-5xl">tune</span>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Global Filters</h2>
+        </div>
+
+        {/* Center: Branch and Project Selects */}
+        <div className="flex items-end gap-8 flex-1">
+          {/* Branch Select */}
+          <div className="flex-1">
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 block">
+              Branch
+            </label>
+            <Select
+              value={Array.from(selectedBranches)[0] || ""}
+              onValueChange={(value) => setSelectedBranches(new Set([value]))}
+            >
+              <SelectTrigger className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white h-12 rounded-lg">
+                <SelectValue placeholder="Select branch" />
+              </SelectTrigger>
+              <SelectContent className="dark:bg-slate-700 dark:border-slate-600">
+                {branches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id} className="dark:text-white">
+                    {branch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-3">
-            {/* Project Filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="justify-between bg-white hover:bg-gray-50 border-gray-200 text-gray-700"
-                >
-                  <span className="truncate">
-                    {selectedProjects.size === 0
-                      ? "Select projects..."
-                      : selectedProjects.size === projects.length
-                        ? "All projects"
-                        : `${selectedProjects.size} project${selectedProjects.size !== 1 ? "s" : ""}`}
-                  </span>
-                  <ChevronDown className="h-4 w-4 opacity-50 ml-2 flex-shrink-0" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuLabel className="font-semibold">Filter by Project</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                  checked={selectedProjects.size === projects.length && projects.length > 0}
-                  onCheckedChange={handleSelectAllProjects}
-                >
-                  {selectedProjects.size === projects.length && projects.length > 0 ? "Deselect All" : "Select All"}
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuSeparator />
+          {/* Project Select */}
+          <div className="flex-1">
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 block">
+              Project
+            </label>
+            <Select
+              value={Array.from(selectedProjects)[0] || ""}
+              onValueChange={(value) => setSelectedProjects(new Set([value]))}
+            >
+              <SelectTrigger className="bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white h-12 rounded-lg">
+                <SelectValue placeholder="Select project" />
+              </SelectTrigger>
+              <SelectContent className="dark:bg-slate-700 dark:border-slate-600">
                 {projects.map((project) => (
-                  <DropdownMenuCheckboxItem
-                    key={project.id}
-                    checked={selectedProjects.has(project.id)}
-                    onCheckedChange={() => handleProjectToggle(project.id)}
-                  >
+                  <SelectItem key={project.id} value={project.id} className="dark:text-white">
                     {project.name}
-                  </DropdownMenuCheckboxItem>
+                  </SelectItem>
                 ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Branch Filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="justify-between bg-white hover:bg-gray-50 border-gray-200 text-gray-700"
-                >
-                  <span className="truncate">
-                    {selectedBranches.size === 0
-                      ? "Select branches..."
-                      : selectedBranches.size === branches.length
-                        ? "All branches"
-                        : `${selectedBranches.size} branch${selectedBranches.size !== 1 ? "es" : ""}`}
-                  </span>
-                  <ChevronDown className="h-4 w-4 opacity-50 ml-2 flex-shrink-0" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuLabel className="font-semibold">Filter by Branch</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuCheckboxItem
-                  checked={selectedBranches.size === branches.length && branches.length > 0}
-                  onCheckedChange={handleSelectAllBranches}
-                >
-                  {selectedBranches.size === branches.length && branches.length > 0 ? "Deselect All" : "Select All"}
-                </DropdownMenuCheckboxItem>
-                <DropdownMenuSeparator />
-                {branches.map((branch) => (
-                  <DropdownMenuCheckboxItem
-                    key={branch.id}
-                    checked={selectedBranches.has(branch.id)}
-                    onCheckedChange={() => handleBranchToggle(branch.id)}
-                  >
-                    {branch.name}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </SelectContent>
+            </Select>
           </div>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Right: Status Legend */}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div>
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">TARGET (31%-50%)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-amber-500 rounded-sm"></div>
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">CAUTION (21%-30%)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-400">LOW (0%-20%)</span>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

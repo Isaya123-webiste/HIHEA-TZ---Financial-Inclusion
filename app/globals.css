@@ -90,3 +90,20 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Material Symbols font styling - using imported font family */
+@supports (font-variation-settings: normal) {
+  .material-symbols-outlined {
+    font-family: var(--font-material-symbols);
+    font-weight: 400;
+    font-style: normal;
+    font-size: 24px;
+    display: inline-flex;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+  }
+}
