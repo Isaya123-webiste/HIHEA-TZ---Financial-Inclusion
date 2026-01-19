@@ -76,9 +76,18 @@ export default function AccessTable({ selectedProjects, selectedBranches }: Acce
   }, [])
 
   const chartData: ChartDataPoint[] = useMemo(() => {
-    const filtered = accessData.filter(
-      (item) => selectedBranches.has(item.branchId) && selectedProjects.has(item.projectId),
-    )
+    // Special IDs for "All" options
+    const ALL_BRANCHES_ID = "all-branches"
+    const ALL_PROJECTS_ID = "all-projects"
+
+    const showAllBranches = selectedBranches.has(ALL_BRANCHES_ID)
+    const showAllProjects = selectedProjects.has(ALL_PROJECTS_ID)
+
+    const filtered = accessData.filter((item) => {
+      const branchMatch = showAllBranches || selectedBranches.has(item.branchId)
+      const projectMatch = showAllProjects || selectedProjects.has(item.projectId)
+      return branchMatch && projectMatch
+    })
 
     if (filtered.length === 0) return []
 
@@ -114,18 +123,38 @@ export default function AccessTable({ selectedProjects, selectedBranches }: Acce
   }, [accessData, selectedBranches, selectedProjects])
 
   const avgAccessActualData = useMemo(() => {
-    const filtered = accessData.filter(
-      (item) => selectedBranches.has(item.branchId) && selectedProjects.has(item.projectId),
-    )
+    // Special IDs for "All" options
+    const ALL_BRANCHES_ID = "all-branches"
+    const ALL_PROJECTS_ID = "all-projects"
+
+    const showAllBranches = selectedBranches.has(ALL_BRANCHES_ID)
+    const showAllProjects = selectedProjects.has(ALL_PROJECTS_ID)
+
+    const filtered = accessData.filter((item) => {
+      const branchMatch = showAllBranches || selectedBranches.has(item.branchId)
+      const projectMatch = showAllProjects || selectedProjects.has(item.projectId)
+      return branchMatch && projectMatch
+    })
+
     if (filtered.length === 0) return 0
     const sum = filtered.reduce((acc, item) => acc + item.accessActualData, 0)
     return (sum / filtered.length).toFixed(2)
   }, [accessData, selectedBranches, selectedProjects])
 
   const uniqueProjects = useMemo(() => {
-    const filtered = accessData.filter(
-      (item) => selectedBranches.has(item.branchId) && selectedProjects.has(item.projectId),
-    )
+    // Special IDs for "All" options
+    const ALL_BRANCHES_ID = "all-branches"
+    const ALL_PROJECTS_ID = "all-projects"
+
+    const showAllBranches = selectedBranches.has(ALL_BRANCHES_ID)
+    const showAllProjects = selectedProjects.has(ALL_PROJECTS_ID)
+
+    const filtered = accessData.filter((item) => {
+      const branchMatch = showAllBranches || selectedBranches.has(item.branchId)
+      const projectMatch = showAllProjects || selectedProjects.has(item.projectId)
+      return branchMatch && projectMatch
+    })
+
     return [...new Set(filtered.map((d) => d.projectId))]
   }, [accessData, selectedBranches, selectedProjects])
 
@@ -184,20 +213,22 @@ export default function AccessTable({ selectedProjects, selectedBranches }: Acce
 
       <CardContent className="pt-4 bg-white">
         {chartData.length > 0 ? (
-          <div className="w-full h-64">
+          <div className="w-full h-96 overflow-x-auto">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 20, left: 40, bottom: 20 }}>
+              <BarChart data={chartData} margin={{ top: 20, right: 60, left: 50, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
                 <XAxis
                   dataKey="category"
                   tick={{ fill: "#374151", fontSize: 12, fontWeight: 500 }}
                   axisLine={{ stroke: "#D1D5DB" }}
+                  height={40}
                 />
                 <YAxis
                   domain={[0, 100]}
                   ticks={[0, 20, 40, 60, 80, 100]}
                   tick={{ fill: "#6B7280", fontSize: 11 }}
                   axisLine={{ stroke: "#D1D5DB" }}
+                  width={60}
                 />
                 <Tooltip
                   contentStyle={{
@@ -207,11 +238,17 @@ export default function AccessTable({ selectedProjects, selectedBranches }: Acce
                     padding: "8px 12px",
                   }}
                   content={({ active, payload }) => {
-                    if (active && payload && payload[0]) {
+                    if (active && payload && payload.length > 0) {
+                      // Find the bar that matches the hovered bar state
+                      const hoveredPayload = payload.find((entry) => {
+                        const dataKey = entry.dataKey?.toString() || ""
+                        return dataKey === hoveredBar
+                      }) || payload[0]
+                      
+                      const projectName = hoveredPayload.dataKey?.toString().split("-")[0] || "Unknown"
                       return (
                         <div className="bg-black text-white px-3 py-2 rounded text-xs">
-                          <p className="text-gray-300">{payload[0].dataKey?.toString().split("-")[0]}</p>
-                          <p className="text-white font-bold">{(payload[0].value as number).toFixed(2)}%</p>
+                          <p className="text-white font-semibold">{projectName}</p>
                         </div>
                       )
                     }
@@ -223,6 +260,8 @@ export default function AccessTable({ selectedProjects, selectedBranches }: Acce
                   const projectData = accessData.find((d) => d.projectId === projectId)
                   const projectName = projectData?.projectName || "Unknown"
                   const barKey = `${projectName}-${projectId}`
+                  const isHovered = hoveredBar === barKey
+                  const shouldFade = hoveredBar !== null && !isHovered
 
                   return (
                     <Bar
@@ -233,12 +272,19 @@ export default function AccessTable({ selectedProjects, selectedBranches }: Acce
                       label={{
                         position: "top",
                         fill: "#374151",
-                        fontSize: 10,
+                        fontSize: 11,
                         fontWeight: 600,
-                        formatter: (value: number) => `${(value || 0).toFixed(0)}%`,
+                        offset: 5,
+                        formatter: (value: number) => `${(value || 0).toFixed(1)}%`,
                       }}
                       onMouseEnter={() => setHoveredBar(barKey)}
                       onMouseLeave={() => setHoveredBar(null)}
+                      opacity={shouldFade ? 0.2 : 1}
+                      style={{
+                        transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+                        filter: isHovered ? `drop-shadow(0 0 12px ${PROJECT_COLORS[projectIndex % PROJECT_COLORS.length]}80)` : "none",
+                        transformOrigin: "bottom center",
+                      }}
                     />
                   )
                 })}

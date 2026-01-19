@@ -467,6 +467,7 @@ export default function BranchReportOfficerForms() {
       const result = await getFormById(formId, profile.id)
       if (result.success && result.data) {
         const form = result.data
+
         const editData: FormData = {}
 
         // Convert form data to FormData format
@@ -478,6 +479,10 @@ export default function BranchReportOfficerForms() {
         setFormData(editData)
         setEditingFormId(formId)
         setEditingForm(form)
+        // IMPORTANT: Restore project_id when loading form for editing
+        if (form.project_id) {
+          setSelectedProjectId(form.project_id)
+        }
         setIsFormOpen(true)
         setCurrentFieldIndex(0)
       } else {
@@ -809,39 +814,6 @@ export default function BranchReportOfficerForms() {
     setDateFilter("")
     setGroupFilter("")
     setStatusFilter("all")
-  }
-
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-white">
-        <div className="text-center">
-          <div
-            className="h-8 w-8 animate-spin rounded-full border-4"
-            style={{ borderColor: "#009edb", borderTopColor: "transparent" }}
-          ></div>
-          <p className="mt-2 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-white">
-        <Card className="w-full max-w-md">
-          <CardContent className="text-center space-y-4 p-6">
-            <AlertCircle className="h-12 w-12 mx-auto" style={{ color: "#009edb" }} />
-            <h2 className="text-xl font-semibold" style={{ color: "#009edb" }}>
-              Error
-            </h2>
-            <p className="text-gray-600">{error}</p>
-            <Button onClick={() => window.location.reload()} className="w-full" style={{ backgroundColor: "#009edb" }}>
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
   }
 
   const navigationItems = [

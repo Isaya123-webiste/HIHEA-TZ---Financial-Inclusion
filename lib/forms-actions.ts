@@ -206,6 +206,7 @@ export async function submitForm(userId: string, formData: any) {
       bros_at_end: Number.parseInt(formData.bros_at_end) || 0,
       status: "submitted",
       created_by: userId,
+      submitted_by: userId,
       branch_id: profile.branch_id,
       updated_at: new Date().toISOString(),
       submitted_at: new Date().toISOString(),
