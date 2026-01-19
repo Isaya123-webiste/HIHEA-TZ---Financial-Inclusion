@@ -6,7 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { Noto_Sans_Symbols as Material_Symbols_Outlined } from "next/font/google"
 import "./globals.css"
 
-const materialSymbols = Material_Symbols_Outlined({ weight: "400" })
+const materialSymbols = Material_Symbols_Outlined({ weight: "400", subsets: ["symbols"] })
 
 export const metadata: Metadata = {
   title: "v0 App",
