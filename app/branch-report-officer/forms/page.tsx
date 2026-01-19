@@ -239,14 +239,6 @@ export default function BranchReportOfficerForms() {
       placeholder: "Describe loan uses for members with 3 value chain activities",
     },
     {
-      id: "loan_cost_high",
-      name: "loan_cost_high",
-      label: "Loan cost-high? Ask members.",
-      type: "number", // Changed from "textarea" to "number"
-      required: false,
-      placeholder: "0", // Changed placeholder to reflect numeric input
-    },
-    {
       id: "loan_delinquency",
       name: "loan_delinquency",
       label: "Loan on delinquency",
