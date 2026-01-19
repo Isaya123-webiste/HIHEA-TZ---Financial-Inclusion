@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Shield } from "lucide-react"
+import { Shield, Users, GitBranch, FileText, CheckCircle, TrendingUp, TrendingDown, Moon } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 import { getAllUsers, getAllBranches, getUserProfileSimple } from "@/lib/admin-actions"
 import { debugAdminUser, fixAdminRole } from "@/lib/debug-admin"
@@ -295,7 +295,7 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center gap-4">
             <button className="p-2.5 text-slate-500 hover:bg-slate-100 rounded-full transition-colors dark:text-white dark:hover:bg-slate-900">
-              <span className="material-symbols-outlined">dark_mode</span>
+              <Moon className="w-5 h-5" />
             </button>
             <div className="h-8 w-px bg-slate-200 dark:bg-slate-700"></div>
             <div className="flex items-center gap-3">
@@ -333,12 +333,12 @@ export default function AdminDashboard() {
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-4">
                 <span className="text-slate-400 font-semibold text-xs uppercase tracking-wider">Total Users</span>
-                <span className="material-symbols-outlined text-slate-400 text-2xl">groups</span>
+                <Users className="w-6 h-6 text-slate-400" />
               </div>
               <div className="text-4xl font-extrabold mb-1">{users.length.toLocaleString()}</div>
               <p className="text-slate-400 dark:text-slate-500 text-sm mb-4 font-medium">Registered users</p>
               <div className="flex items-center gap-1 text-green-400 dark:text-green-500 text-sm font-bold">
-                <span className="material-symbols-outlined text-xs">arrow_upward</span>
+                <TrendingUp className="w-4 h-4" />
                 12% <span className="font-normal text-slate-500 dark:text-slate-400 ml-1">vs last month</span>
               </div>
             </div>
@@ -349,14 +349,12 @@ export default function AdminDashboard() {
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-4">
                 <span className="text-white/80 font-semibold text-xs uppercase tracking-wider">Active Projects</span>
-                <span className="material-symbols-outlined text-white text-2xl">account_tree</span>
+                <GitBranch className="w-6 h-6 text-white" />
               </div>
               <div className="text-4xl font-extrabold mb-1">{branches.length}</div>
               <p className="text-white/70 dark:text-white/80 text-sm mb-4 font-medium">Current initiatives</p>
               <div className="flex items-center gap-1 text-white dark:text-slate-300 text-sm font-bold">
-                <span className="material-symbols-outlined text-xs text-white/90 dark:text-slate-400">
-                  arrow_upward
-                </span>
+                <TrendingUp className="w-4 h-4 text-white/90 dark:text-slate-400" />
                 4.1% <span className="font-normal text-white/70 dark:text-slate-400 ml-1">vs last month</span>
               </div>
             </div>
@@ -366,12 +364,12 @@ export default function AdminDashboard() {
           <div className="bg-slate-950 dark:bg-slate-900 text-white p-6 rounded-2xl shadow-xl border border-slate-800 dark:border-slate-700">
             <div className="flex justify-between items-start mb-4">
               <span className="text-slate-400 font-semibold text-xs uppercase tracking-wider">Forms Submitted</span>
-              <span className="material-symbols-outlined text-slate-400 text-2xl">description</span>
+              <FileText className="w-6 h-6 text-slate-400" />
             </div>
             <div className="text-4xl font-extrabold mb-1">{submittedForms.toLocaleString()}</div>
             <p className="text-slate-400 dark:text-slate-500 text-sm mb-4 font-medium">By Project Officers</p>
             <div className="flex items-center gap-1 text-red-400 dark:text-red-500 text-sm font-bold">
-              <span className="material-symbols-outlined text-xs">arrow_downward</span>
+              <TrendingDown className="w-4 h-4" />
               2.5% <span className="font-normal text-slate-500 dark:text-slate-400 ml-1">vs last month</span>
             </div>
           </div>
@@ -380,12 +378,12 @@ export default function AdminDashboard() {
           <div className="bg-cyan-500 dark:bg-cyan-600 p-6 rounded-2xl shadow-xl shadow-cyan-500/30 dark:shadow-cyan-600/30 text-white">
             <div className="flex justify-between items-start mb-4">
               <span className="text-white/80 font-semibold text-xs uppercase tracking-wider">Forms Approved</span>
-              <span className="material-symbols-outlined text-white text-2xl">verified</span>
+              <CheckCircle className="w-6 h-6 text-white" />
             </div>
             <div className="text-4xl font-extrabold mb-1">{approvedForms.toLocaleString()}</div>
             <p className="text-white/70 dark:text-white/80 text-sm mb-4 font-medium">Aggregate Average</p>
             <div className="flex items-center gap-1 text-white dark:text-slate-300 text-sm font-bold">
-              <span className="material-symbols-outlined text-xs text-white/90 dark:text-slate-400">arrow_upward</span>
+              <TrendingUp className="w-4 h-4 text-white/90 dark:text-slate-400" />
               8.1% <span className="font-normal text-white/70 dark:text-slate-400 ml-1">vs last month</span>
             </div>
           </div>

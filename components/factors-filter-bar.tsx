@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, Filter } from "lucide-react"
 import { fetchUsageChartData } from "@/lib/usage-display-actions"
 
 interface FactorsFilterBarProps {
@@ -139,7 +139,7 @@ export default function FactorsFilterBar({
       <div className="flex items-center justify-between gap-8">
         {/* Left: Filter Icon and Title */}
         <div className="flex items-center gap-3">
-          <span className="material-symbols-outlined text-slate-600 dark:text-slate-400 text-5xl">tune</span>
+          <Filter className="w-8 h-8 text-slate-600 dark:text-slate-400" />
           <h2 className="text-xl font-bold text-slate-900 dark:text-white">Global Filters</h2>
         </div>
 
