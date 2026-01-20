@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Shield, Users, GitBranch, FileText, CheckCircle, TrendingUp, TrendingDown, Moon } from "lucide-react"
+import { Shield, Users, GitBranch, FileText, CheckCircle, TrendingUp, TrendingDown } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 import { getAllUsers, getAllBranches, getUserProfileSimple } from "@/lib/admin-actions"
 import { debugAdminUser, fixAdminRole } from "@/lib/debug-admin"
 import UsageChart from "@/components/usage-chart"
 import FactorsFilterBar from "@/components/factors-filter-bar"
 import AccessTable from "@/components/access-table"
+import PageHeader from "@/components/page-header"
+import DarkModeToggle from "@/components/dark-mode-toggle" // Import DarkModeToggle
 
 export default function AdminDashboard() {
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -287,33 +289,8 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-800">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-700">
-        <div className="max-w-[1600px] mx-auto px-6 h-20 flex items-center justify-between">
-          <div>
-            <h2 className="font-bold text-lg text-slate-800 dark:text-white">Analytics Overview</h2>
-          </div>
-          <div className="flex items-center gap-4">
-            <button className="p-2.5 text-slate-500 hover:bg-slate-100 rounded-full transition-colors dark:text-white dark:hover:bg-slate-900">
-              <Moon className="w-5 h-5" />
-            </button>
-            <div className="h-8 w-px bg-slate-200 dark:bg-slate-700"></div>
-            <div className="flex items-center gap-3">
-              <div className="text-right hidden sm:block">
-                <p className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                  Administrator
-                </p>
-                <p className="text-sm font-bold text-slate-700 dark:text-white">
-                  {adminProfile?.full_name || "Admin User"}
-                </p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center text-white font-black text-base shadow-lg shadow-indigo-500/20 dark:shadow-indigo-400/20">
-                {adminProfile?.full_name ? adminProfile.full_name.charAt(0) : "A"}
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Page Header */}
+      <PageHeader title="Dashboard" />
 
       <main className="max-w-[1600px] mx-auto p-6 lg:p-10">
         {/* Title Section */}

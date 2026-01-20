@@ -83,14 +83,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Sidebar */}
       <div
         className={`
-          fixed inset-y-0 left-0 z-50 flex flex-col bg-white shadow-lg transition-all duration-300 lg:relative lg:translate-x-0
+          fixed inset-y-0 left-0 z-50 flex flex-col bg-white dark:bg-slate-900 shadow-lg dark:shadow-slate-950/50 transition-all duration-300 lg:relative lg:translate-x-0 border-r border-slate-200 dark:border-slate-700
           ${isCollapsed ? "w-16" : "w-64"}
           ${isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         `}
       >
         {/* Header */}
         <div
-          className={`border-b ${isCollapsed ? "px-2 py-4 space-y-3" : "px-4 py-4 flex items-center justify-between"}`}
+          className={`border-b border-slate-200 dark:border-slate-700 ${isCollapsed ? "px-2 py-4 space-y-3" : "px-4 py-4 flex items-center justify-between"}`}
         >
           {/* Hamburger button - positioned above logo when collapsed, top-right when expanded */}
           {isCollapsed && (
@@ -99,9 +99,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="p-2 hover:bg-gray-100 w-10 h-10"
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 w-10 h-10"
               >
-                <span className="material-icons text-gray-600 text-lg">menu</span>
+                <span className="material-icons text-slate-600 dark:text-slate-400 text-lg">menu</span>
               </Button>
             </div>
           )}
@@ -112,7 +112,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <div className="rounded-lg p-2">
                 <Image src="/icon.png" alt="HIH Logo" width={24} height={24} />
               </div>
-              <span className="font-bold text-gray-900">HIH Admin</span>
+              <span className="font-bold text-slate-900 dark:text-white">HIH Admin</span>
             </div>
           )}
 
@@ -130,9 +130,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               variant="ghost"
               size="sm"
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="p-2 hover:bg-gray-100 w-10 h-10"
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 w-10 h-10"
             >
-              <span className="material-icons text-gray-600 text-lg">menu_open</span>
+              <span className="material-icons text-slate-600 dark:text-slate-400 text-lg">menu_open</span>
             </Button>
           )}
 
@@ -157,7 +157,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     onClick={() => toggleExpanded(item.name)}
                     className={`
                       w-full flex items-center justify-between rounded-lg text-sm font-medium transition-colors
-                      ${isExpanded ? "text-gray-900 bg-gray-100" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"}
+                      ${isExpanded ? "text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800" : "text-slate-700 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}
                       ${isCollapsed ? "justify-center p-3 w-12 h-12" : "gap-3 px-3 py-2"}
                     `}
                     title={isCollapsed ? item.name : undefined}
@@ -168,9 +168,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     </div>
                     {!isCollapsed &&
                       (isExpanded ? (
-                        <ChevronUp className="h-4 w-4 text-gray-500" />
+                        <ChevronUp className="h-4 w-4 text-slate-500 dark:text-slate-500" />
                       ) : (
-                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                        <ChevronDown className="h-4 w-4 text-slate-500 dark:text-slate-500" />
                       ))}
                   </button>
                 ) : (
@@ -178,10 +178,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     href={item.href || "#"}
                     className={`
                       flex items-center rounded-lg text-sm font-medium transition-colors
-                      ${isActive ? "text-white" : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"}
+                      ${isActive ? "text-white bg-blue-500 dark:bg-blue-600" : "text-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"}
                       ${isCollapsed ? "justify-center p-3 w-12 h-12" : "gap-3 px-3 py-2"}
                     `}
-                    style={isActive ? { backgroundColor: "#009edb" } : {}}
                     title={isCollapsed ? item.name : undefined}
                   >
                     <span className="material-icons text-xl">{item.icon}</span>
@@ -190,7 +189,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 )}
 
                 {!isCollapsed && hasSubItems && isExpanded && "subItems" in item && (
-                  <div className="ml-2 mt-2 space-y-1 border-l border-gray-200 pl-3">
+                  <div className="ml-2 mt-2 space-y-1 border-l border-slate-200 dark:border-slate-700 pl-3">
                     {item.subItems.map((subItem) => {
                       const isSubActive = pathname === subItem.href
                       return (
@@ -199,7 +198,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                           href={subItem.href}
                           className={`
                             flex items-center rounded-md text-sm font-medium transition-colors px-3 py-2
-                            ${isSubActive ? "text-blue-600 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}
+                            ${isSubActive ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-slate-800" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800"}
                           `}
                         >
                           {subItem.name}
@@ -214,12 +213,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </nav>
 
         {/* Footer */}
-        <div className={`border-t ${isCollapsed ? "px-2 py-4" : "px-2 py-2"}`}>
+        <div className={`border-t border-slate-200 dark:border-slate-700 ${isCollapsed ? "px-2 py-4" : "px-2 py-2"}`}>
           <Button
             variant="ghost"
             onClick={handleSignOut}
             className={`
-              text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors
+              text-slate-700 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors
               ${isCollapsed ? "w-12 h-12 p-3 justify-center" : "w-full justify-start gap-3 px-3 py-2"}
             `}
             title={isCollapsed ? "Sign Out" : undefined}
@@ -233,11 +232,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Mobile header */}
-        <div className="flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden">
+        <div className="flex h-16 items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 lg:hidden">
           <Button variant="ghost" size="sm" onClick={() => setIsMobileOpen(true)}>
             <Menu className="h-5 w-5" />
           </Button>
-          <h1 className="font-bold text-gray-900">HIH Admin</h1>
+          <h1 className="font-bold text-slate-900 dark:text-white">HIH Admin</h1>
           <div className="w-8" /> {/* Spacer */}
         </div>
 

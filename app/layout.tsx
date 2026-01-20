@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Noto_Sans_Symbols as Material_Symbols_Outlined } from "next/font/google"
+import { ThemeProvider } from "next-themes"
 import "./globals.css"
 
 const materialSymbols = Material_Symbols_Outlined({ weight: "400", subsets: ["symbols"] })
@@ -37,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${materialSymbols.variable}`}>
+    <html lang="en" className={`${materialSymbols.variable}`} suppressHydrationWarning>
       <head>
         <style>{`
 html {
@@ -47,9 +48,25 @@ html {
   --font-material-symbols: ${materialSymbols.variable};
 }
         `}</style>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const theme = localStorage.getItem('theme') || 'light';
+                if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
       </head>
       <body>
-        {children}
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          {children}
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>
