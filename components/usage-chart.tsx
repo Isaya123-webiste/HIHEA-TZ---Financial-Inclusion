@@ -163,23 +163,23 @@ export default function UsageChart({ selectedProjects, selectedBranches }: Usage
 
   if (loading) {
     return (
-      <Card className="border border-[#D1D5DB] shadow-sm overflow-hidden">
-        <CardHeader className="bg-white pb-4 border-b border-[#D1D5DB]">
+      <Card className="border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+        <CardHeader className="bg-white dark:bg-slate-900 pb-4 border-b border-slate-200 dark:border-slate-700">
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle className="text-3xl font-bold text-gray-900">{avgUsageActualData}%</CardTitle>
-              <p className="text-sm text-gray-600 mt-1">Usage</p>
+              <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">{avgUsageActualData}%</CardTitle>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Usage</p>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-              <span className="text-xs font-semibold text-gray-700">Usage</span>
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Usage</span>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="flex items-center justify-center h-64 bg-white">
+        <CardContent className="flex items-center justify-center h-64 bg-white dark:bg-slate-900">
           <div className="text-center">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent mx-auto"></div>
-            <p className="mt-2 text-blue-600 font-semibold text-sm">Loading usage data...</p>
+            <p className="mt-2 text-blue-600 dark:text-blue-400 font-semibold text-sm">Loading usage data...</p>
           </div>
         </CardContent>
       </Card>
@@ -188,61 +188,60 @@ export default function UsageChart({ selectedProjects, selectedBranches }: Usage
 
   if (error) {
     return (
-      <Card className="border border-[#D1D5DB] shadow-sm overflow-hidden">
-        <CardHeader className="bg-white pb-4 border-b border-[#D1D5DB]">
-          <CardTitle className="text-xl font-bold text-gray-900">Usage</CardTitle>
+      <Card className="border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+        <CardHeader className="bg-white dark:bg-slate-900 pb-4 border-b border-slate-200 dark:border-slate-700">
+          <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">Usage</CardTitle>
         </CardHeader>
-        <CardContent className="bg-white">
-          <div className="bg-red-50 border border-red-300 rounded p-3 text-red-700 text-sm font-semibold">{error}</div>
+        <CardContent className="bg-white dark:bg-slate-900">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded p-3 text-red-700 dark:text-red-400 text-sm font-semibold">{error}</div>
         </CardContent>
       </Card>
     )
   }
 
   return (
-    <Card className="border border-[#D1D5DB] shadow-sm overflow-hidden">
-      <CardHeader className="bg-white pb-4 border-b border-[#D1D5DB]">
+    <Card className="border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden bg-white dark:bg-slate-900">
+      <CardHeader className="bg-white dark:bg-slate-900 pb-4 border-b border-slate-200 dark:border-slate-700">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-3xl font-bold text-gray-900">{avgUsageActualData}%</CardTitle>
-            <p className="text-sm text-gray-600 mt-1">Usage</p>
+            <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">{avgUsageActualData}%</CardTitle>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Usage</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-            <span className="text-xs font-semibold text-gray-700">Usage</span>
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Usage</span>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-4 bg-white">
+      <CardContent className="pt-4 bg-white dark:bg-slate-900">
         {chartData.length > 0 ? (
           <div className="w-full h-96 overflow-x-auto">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 20, right: 60, left: 50, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
                 <XAxis
                   dataKey="category"
-                  tick={{ fill: "#374151", fontSize: 12, fontWeight: 500 }}
-                  axisLine={{ stroke: "#D1D5DB" }}
+                  tick={{ fill: "#6b7280", fontSize: 12, fontWeight: 500 }}
+                  axisLine={{ stroke: "#d1d5db" }}
                   height={40}
                 />
                 <YAxis
                   domain={[0, 100]}
                   ticks={[0, 20, 40, 60, 80, 100]}
-                  tick={{ fill: "#6B7280", fontSize: 11 }}
-                  axisLine={{ stroke: "#D1D5DB" }}
+                  tick={{ fill: "#6b7280", fontSize: 11 }}
+                  axisLine={{ stroke: "#d1d5db" }}
                   width={60}
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: "#000000",
+                    backgroundColor: "#1f2937",
                     border: "none",
                     borderRadius: "6px",
                     padding: "8px 12px",
                   }}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length > 0) {
-                      // Find the bar that matches the hovered bar state
                       const hoveredPayload = payload.find((entry) => {
                         const dataKey = entry.dataKey?.toString() || ""
                         return dataKey === hoveredBar
@@ -250,7 +249,7 @@ export default function UsageChart({ selectedProjects, selectedBranches }: Usage
                       
                       const projectName = hoveredPayload.dataKey?.toString().split("-")[0] || "Unknown"
                       return (
-                        <div className="bg-black text-white px-3 py-2 rounded text-xs">
+                        <div className="bg-slate-900 text-white px-3 py-2 rounded text-xs">
                           <p className="text-white font-semibold">{projectName}</p>
                         </div>
                       )
@@ -274,7 +273,7 @@ export default function UsageChart({ selectedProjects, selectedBranches }: Usage
                       radius={[4, 4, 0, 0]}
                       label={{
                         position: "top",
-                        fill: "#374151",
+                        fill: "#6b7280",
                         fontSize: 11,
                         fontWeight: 600,
                         offset: 5,
@@ -296,8 +295,8 @@ export default function UsageChart({ selectedProjects, selectedBranches }: Usage
           </div>
         ) : (
           <div className="text-center py-8">
-            <p className="text-gray-700 font-semibold text-sm">No usage data available</p>
-            <p className="text-gray-500 text-xs mt-1">Try adjusting your filters</p>
+            <p className="text-slate-700 dark:text-slate-300 font-semibold text-sm">No usage data available</p>
+            <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">Try adjusting your filters</p>
           </div>
         )}
       </CardContent>

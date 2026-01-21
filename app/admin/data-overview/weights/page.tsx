@@ -26,6 +26,7 @@ import {
   type WeightConfig,
 } from "@/lib/weights-actions"
 import { ToastContainer, useToast } from "@/components/toast"
+import PageHeader from "@/components/page-header"
 
 type Factor = "USAGE" | "ACCESS" | "BARRIERS"
 
@@ -236,196 +237,201 @@ export default function WeightsConfigurationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+    <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-800">
+      {/* Page Header */}
+      <PageHeader title="Data Overview" />
 
-      {/* Header */}
-      <div className="border-b border-slate-200 bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-bold text-slate-900">Weights Configuration</h1>
-            <p className="text-slate-600">Manage weight values for measurement systems</p>
-          </div>
-        </div>
-      </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="mb-12">
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-slate-900">Select Measurement System</h2>
-            <p className="text-sm text-slate-600 mt-1">Choose the measurement system to configure weights</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {AVAILABLE_FACTORS.map((factor) => (
-              <button
-                key={factor.value}
-                onClick={() => setSelectedFactor(factor.value)}
-                className={`relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:shadow-lg text-left ${
-                  selectedFactor === factor.value
-                    ? `${factor.borderColor} ${factor.bgColor} shadow-lg ring-2 ring-offset-2 ${factor.ringColor}`
-                    : "border-slate-200 bg-white hover:border-slate-300"
-                }`}
-              >
-                <div className="p-6 relative z-10">
-                  {/* Icon */}
-                  <div
-                    className={`inline-flex items-center justify-center w-12 h-12 rounded-lg ${factor.bgColor} ${factor.color} mb-4`}
-                  >
-                    {factor.icon}
-                  </div>
-
-                  {/* Label */}
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">{factor.label}</h3>
-
-                  {/* Description */}
-                  <p className="text-sm text-slate-600">{factor.description}</p>
-
-                  {/* Selected indicator */}
-                  {selectedFactor === factor.value && (
-                    <div className={`mt-4 flex items-center gap-2 ${factor.color} font-medium text-sm`}>
-                      <div className={`w-2 h-2 rounded-full ${factor.color.replace("text-", "bg-")}`}></div>
-                      Selected
-                    </div>
-                  )}
-                </div>
-
-                {/* Background accent */}
-                {selectedFactor === factor.value && (
-                  <div
-                    className={`absolute top-0 right-0 w-32 h-32 ${factor.bgColor} opacity-50 -mr-16 -mt-16 rounded-full`}
-                  ></div>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="space-y-3 text-center">
-              <div className="animate-spin inline-flex items-center justify-center w-8 h-8 border-4 border-slate-200 border-t-blue-500 rounded-full"></div>
-              <p className="text-slate-600">Loading weights...</p>
+        {/* Header */}
+        <div className="border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm">
+          <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold text-slate-900 dark:text-white">Weights Configuration</h1>
+              <p className="text-slate-600 dark:text-slate-400">Manage weight values for measurement systems</p>
             </div>
           </div>
-        ) : (
-          <div className="space-y-6">
-            {Object.entries(groupedWeights).map(([category, categoryWeights]) => (
-              <Card key={category} className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                <div
-                  className="flex items-center justify-between p-6 cursor-pointer hover:bg-slate-50 transition-colors"
-                  onClick={() => toggleSection(category as keyof typeof expandedSections)}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="text-slate-600">
-                      {expandedSections[category as keyof typeof expandedSections] ? (
-                        <ChevronUp className="w-5 h-5" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5" />
-                      )}
-                    </div>
-                    <div className="text-slate-500">{getCategoryIcon(category)}</div>
-                    <div>
-                      <h2 className="text-lg font-semibold text-slate-900">{getCategoryLabel(category)}</h2>
-                      <p className="text-sm text-slate-500 mt-1">{getCategoryDescription(category)}</p>
-                    </div>
-                  </div>
-                  <span
-                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getBadgeColor()}`}
-                  >
-                    {categoryWeights.length} items
-                  </span>
-                </div>
+        </div>
 
-                {expandedSections[category as keyof typeof expandedSections] && (
-                  <CardContent className="pt-0 px-6 pb-6 space-y-3 bg-slate-50">
-                    {categoryWeights.map((weight, idx) => (
-                      <div
-                        key={weight.id}
-                        className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition-all group"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-200 text-slate-700 text-sm font-medium">
-                              {idx + 1}
-                            </span>
-                            <div>
-                              <p className="font-semibold text-slate-900">{weight.metric_name}</p>
-                              {weight.description && (
-                                <p className="text-sm text-slate-600 mt-0.5">{weight.description}</p>
-                              )}
+        {/* Content */}
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="mb-12">
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Select Measurement System</h2>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Choose the measurement system to configure weights</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {AVAILABLE_FACTORS.map((factor) => (
+                <button
+                  key={factor.value}
+                  onClick={() => setSelectedFactor(factor.value)}
+                  className={`relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:shadow-lg text-left ${
+                    selectedFactor === factor.value
+                      ? `${factor.borderColor} ${factor.bgColor} shadow-lg ring-2 ring-offset-2 ${factor.ringColor}`
+                      : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-slate-300 dark:hover:border-slate-600"
+                  }`}
+                >
+                  <div className="p-6 relative z-10">
+                    {/* Icon */}
+                    <div
+                      className={`inline-flex items-center justify-center w-12 h-12 rounded-lg ${factor.bgColor} ${factor.color} mb-4`}
+                    >
+                      {factor.icon}
+                    </div>
+
+                    {/* Label */}
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">{factor.label}</h3>
+
+                    {/* Description */}
+                    <p className="text-sm text-slate-600 dark:text-slate-400">{factor.description}</p>
+
+                    {/* Selected indicator */}
+                    {selectedFactor === factor.value && (
+                      <div className={`mt-4 flex items-center gap-2 ${factor.color} font-medium text-sm`}>
+                        <div className={`w-2 h-2 rounded-full ${factor.color.replace("text-", "bg-")}`}></div>
+                        Selected
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Background accent */}
+                  {selectedFactor === factor.value && (
+                    <div
+                      className={`absolute top-0 right-0 w-32 h-32 ${factor.bgColor} opacity-50 -mr-16 -mt-16 rounded-full`}
+                    ></div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="space-y-3 text-center">
+                <div className="animate-spin inline-flex items-center justify-center w-8 h-8 border-4 border-slate-200 dark:border-slate-700 border-t-blue-500 rounded-full"></div>
+                <p className="text-slate-600 dark:text-slate-400">Loading weights...</p>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {Object.entries(groupedWeights).map(([category, categoryWeights]) => (
+                <Card key={category} className="border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-slate-800">
+                  <div
+                    className="flex items-center justify-between p-6 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                    onClick={() => toggleSection(category as keyof typeof expandedSections)}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="text-slate-600 dark:text-slate-400">
+                        {expandedSections[category as keyof typeof expandedSections] ? (
+                          <ChevronUp className="w-5 h-5" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5" />
+                        )}
+                      </div>
+                      <div className="text-slate-500 dark:text-slate-400">{getCategoryIcon(category)}</div>
+                      <div>
+                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{getCategoryLabel(category)}</h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{getCategoryDescription(category)}</p>
+                      </div>
+                    </div>
+                    <span
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getBadgeColor()}`}
+                    >
+                      {categoryWeights.length} items
+                    </span>
+                  </div>
+
+                  {expandedSections[category as keyof typeof expandedSections] && (
+                    <CardContent className="pt-0 px-6 pb-6 space-y-3 bg-slate-50 dark:bg-slate-900">
+                      {categoryWeights.map((weight, idx) => (
+                        <div
+                          key={weight.id}
+                          className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all group"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3">
+                              <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium">
+                                {idx + 1}
+                              </span>
+                              <div>
+                                <p className="font-semibold text-slate-900 dark:text-white">{weight.metric_name}</p>
+                                {weight.description && (
+                                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">{weight.description}</p>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <p className={`text-2xl font-bold ${getWeightValueColor()}`}>{weight.weight_value}</p>
-                            <p className="text-xs text-slate-500 mt-1">Weight Value</p>
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <p className={`text-2xl font-bold ${getWeightValueColor()}`}>{weight.weight_value}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Weight Value</p>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditClick(weight)
+                              }}
+                              className="gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                              Edit
+                            </Button>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleEditClick(weight)
-                            }}
-                            className="gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                            Edit
-                          </Button>
                         </div>
-                      </div>
-                    ))}
-                  </CardContent>
-                )}
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Edit Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Weight Value</DialogTitle>
-            <DialogDescription>
-              Update the weight for: <span className="font-semibold text-slate-900">{editingWeight?.metric_name}</span>
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="weight-input" className="text-slate-700 font-medium">
-                New Weight Value
-              </Label>
-              <Input
-                id="weight-input"
-                type="number"
-                step="0.1"
-                min="0"
-                max="10"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                placeholder="0.5"
-                className="border-slate-300 focus:border-blue-500 focus:ring-blue-500"
-              />
-              <p className="text-xs text-slate-500 mt-2">Current value: {editingWeight?.weight_value}</p>
+                      ))}
+                    </CardContent>
+                  )}
+                </Card>
+              ))}
             </div>
-          </div>
+          )}
+        </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveWeight} disabled={updating} className={getButtonColor()}>
-              {updating ? "Saving..." : "Save Changes"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {/* Edit Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Weight Value</DialogTitle>
+              <DialogDescription>
+                Update the weight for: <span className="font-semibold text-slate-900">{editingWeight?.metric_name}</span>
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="weight-input" className="text-slate-700 font-medium">
+                  New Weight Value
+                </Label>
+                <Input
+                  id="weight-input"
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  max="10"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  placeholder="0.5"
+                  className="border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                />
+                <p className="text-xs text-slate-500 mt-2">Current value: {editingWeight?.weight_value}</p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveWeight} disabled={updating} className={getButtonColor()}>
+                {updating ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   )
 }

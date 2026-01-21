@@ -29,6 +29,7 @@ import {
 import { getAllBranches } from "@/lib/branch-actions"
 import { toast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import PageHeader from "@/components/page-header"
 
 interface UserProfile {
   id: string
@@ -484,89 +485,268 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-muted-foreground">Manage system users and their permissions</p>
-        </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-medium">
-              <Plus className="h-4 w-4 mr-2" />
-              Add User
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Create New User</DialogTitle>
-              <DialogDescription>
-                Add a new user to the system. All fields marked with * are required.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
-              {branchesLoading && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>Loading branches... Please wait.</AlertDescription>
-                </Alert>
-              )}
+    <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-800">
+      {/* Page Header */}
+      <PageHeader title="Users" />
 
-              <div className="grid gap-2">
-                <Label htmlFor="create-name">Full Name *</Label>
-                <Input
-                  id="create-name"
-                  value={createForm.full_name}
-                  onChange={(e) => setCreateForm({ ...createForm, full_name: e.target.value })}
-                  placeholder="Enter full name"
-                  required
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="create-email">Email *</Label>
-                <Input
-                  id="create-email"
-                  type="email"
-                  value={createForm.email}
-                  onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                  placeholder="Enter email address"
-                  required
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="create-password">Password *</Label>
-                <div className="relative">
+      <div className="container mx-auto py-6 space-y-6">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <p className="text-slate-600 dark:text-slate-400 text-sm">Manage system users and their permissions</p>
+          </div>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Add New User</DialogTitle>
+                <DialogDescription>Create a new system user account</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+                <div className="grid gap-2">
+                  <Label htmlFor="create-name">Full Name</Label>
                   <Input
-                    id="create-password"
-                    type={showPassword ? "text" : "password"}
-                    value={createForm.password}
-                    onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                    placeholder="Enter password (min 6 characters)"
-                    required
+                    id="create-name"
+                    placeholder="Enter full name"
+                    value={createForm.full_name}
+                    onChange={(e) => setCreateForm({ ...createForm, full_name: e.target.value })}
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="create-email">Email</Label>
+                  <Input
+                    id="create-email"
+                    type="email"
+                    placeholder="Enter email address"
+                    value={createForm.email}
+                    onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="create-role">Role</Label>
+                  <Select
+                    value={createForm.role}
+                    onValueChange={(value: UserProfile["role"]) => setCreateForm({ ...createForm, role: value })}
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="branch_manager">Branch Manager</SelectItem>
+                      <SelectItem value="program_officer">Program Officer</SelectItem>
+                      <SelectItem value="assistance_program_officer">Business Development Officer</SelectItem>
+                      <SelectItem value="branch_report_officer">Branch Report Officer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="create-branch">Branch</Label>
+                  <Select
+                    value={createForm.branch_id}
+                    onValueChange={(value) => setCreateForm({ ...createForm, branch_id: value })}
+                    disabled={branchesLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={branchesLoading ? "Loading branches..." : "Select branch"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="create-phone">Phone (Optional)</Label>
+                  <Input
+                    id="create-phone"
+                    placeholder="Enter phone number"
+                    value={createForm.phone}
+                    onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="create-password">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="create-password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter password (min 6 characters)"
+                      value={createForm.password}
+                      onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  {createForm.password && createForm.password.length < 6 && (
+                    <p className="text-sm text-red-600">Password must be at least 6 characters long</p>
+                  )}
                 </div>
               </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreateUser}
+                  disabled={isSubmitting || !createForm.password || createForm.password.length < 6}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isSubmitting ? "Creating..." : "Create User"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <div className="flex gap-4 mb-6">
+          <div className="flex-1">
+            <Input
+              placeholder="Search users by name or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+            />
+          </div>
+          <Button onClick={handleSearch} variant="outline">
+            <Search className="h-4 w-4 mr-2" />
+            Search
+          </Button>
+          <Button onClick={loadUsers} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Branch</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">{user.full_name}</TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={getRoleBadgeVariant(user.role)}
+                      className={`font-medium ${
+                        user.role === "admin"
+                          ? "bg-red-100 text-red-800 border-red-200"
+                          : user.role === "branch_manager"
+                            ? "bg-blue-100 text-blue-800 border-blue-200"
+                            : user.role === "program_officer"
+                              ? "bg-green-100 text-green-800 border-green-200"
+                              : user.role === "assistance_program_officer"
+                                ? "bg-green-100 text-green-800 border-green-200"
+                                : "bg-purple-100 text-purple-800 border-purple-200"
+                      }`}
+                    >
+                      {formatRole(user.role)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{user.branch_name || "No Branch"}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={getStatusBadgeVariant(user.status)}
+                      className={`font-medium ${
+                        user.status === "active"
+                          ? "bg-green-100 text-green-800 border-green-200"
+                          : user.status === "inactive"
+                            ? "bg-gray-100 text-gray-800 border-gray-200"
+                            : "bg-yellow-100 text-yellow-800 border-yellow-200"
+                      }`}
+                    >
+                      {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEditUser(user)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      {user.role !== "admin" && (
+                        <Button variant="outline" size="sm" onClick={() => handleDeleteUser(user)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        {users.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No users found</p>
+          </div>
+        )}
+
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Edit User</DialogTitle>
+              <DialogDescription>Update user information and permissions.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-name">Full Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editForm.full_name}
+                  onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+                />
+              </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="create-role">Role *</Label>
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="edit-role">Role</Label>
                 <Select
-                  value={createForm.role}
-                  onValueChange={(value: UserProfile["role"]) => setCreateForm({ ...createForm, role: value })}
-                  required
+                  value={editForm.role}
+                  onValueChange={(value: UserProfile["role"]) => setEditForm({ ...editForm, role: value })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
@@ -579,331 +759,128 @@ export default function UsersPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="create-branch">Branch *</Label>
+                <Label htmlFor="edit-branch">Branch</Label>
                 <Select
-                  value={createForm.branch_id}
-                  onValueChange={(value) => setCreateForm({ ...createForm, branch_id: value })}
+                  value={editForm.branch_id}
+                  onValueChange={(value) => setEditForm({ ...editForm, branch_id: value })}
                   disabled={branchesLoading}
-                  required
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={branchesLoading ? "Loading branches..." : "Select branch"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {branches.length === 0 && !branchesLoading ? (
-                      <SelectItem value="none" disabled>
-                        No branches available
+                    <SelectItem value="none">No Branch</SelectItem>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {branch.name}
                       </SelectItem>
-                    ) : (
-                      branches.map((branch) => (
-                        <SelectItem key={branch.id} value={branch.id}>
-                          {branch.name}
-                        </SelectItem>
-                      ))
-                    )}
+                    ))}
                   </SelectContent>
                 </Select>
-                {branches.length === 0 && !branchesLoading && (
-                  <p className="text-sm text-red-600">No branches found. Please create branches first.</p>
-                )}
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="create-phone">Phone (Optional)</Label>
+                <Label htmlFor="edit-status">Status</Label>
+                <Select
+                  value={editForm.status}
+                  onValueChange={(value: UserProfile["status"]) => setEditForm({ ...editForm, status: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="edit-phone">Phone</Label>
                 <Input
-                  id="create-phone"
-                  value={createForm.phone}
-                  onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
-                  placeholder="Enter phone number"
+                  id="edit-phone"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                 />
+              </div>
+
+              <div className="border-t pt-4">
+                <div className="flex items-center space-x-2 mb-3">
+                  <input
+                    type="checkbox"
+                    id="change-password"
+                    checked={editForm.changePassword}
+                    onChange={(e) => setEditForm({ ...editForm, changePassword: e.target.checked, password: "" })}
+                    className="rounded"
+                  />
+                  <Label htmlFor="change-password" className="text-sm font-medium">
+                    Change Password
+                  </Label>
+                </div>
+
+                {editForm.changePassword && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-password">New Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="edit-password"
+                        type={showEditPassword ? "text" : "password"}
+                        value={editForm.password}
+                        onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                        placeholder="Enter new password (min 6 characters)"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowEditPassword(!showEditPassword)}
+                      >
+                        {showEditPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    {editForm.password && editForm.password.length < 6 && (
+                      <p className="text-sm text-red-600">Password must be at least 6 characters long</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                 Cancel
               </Button>
               <Button
-                onClick={handleCreateUser}
-                disabled={isSubmitting || branchesLoading || branches.length === 0}
+                onClick={handleUpdateUser}
+                disabled={isSubmitting || (editForm.changePassword && editForm.password.length < 6)}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {isSubmitting ? "Creating..." : "Create User"}
+                {isSubmitting ? "Updating..." : "Update User"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Delete User</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete <strong>{userToDelete?.full_name}</strong>? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={confirmDeleteUser}>
+                Delete User
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Users</CardTitle>
-          <CardDescription>Total users: {users.length}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4 mb-6">
-            <div className="flex-1">
-              <Input
-                placeholder="Search users by name or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-              />
-            </div>
-            <Button onClick={handleSearch} variant="outline">
-              <Search className="h-4 w-4 mr-2" />
-              Search
-            </Button>
-            <Button onClick={loadUsers} variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          </div>
-
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.full_name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={getRoleBadgeVariant(user.role)}
-                        className={`font-medium ${
-                          user.role === "admin"
-                            ? "bg-red-100 text-red-800 border-red-200"
-                            : user.role === "branch_manager"
-                              ? "bg-blue-100 text-blue-800 border-blue-200"
-                              : user.role === "program_officer"
-                                ? "bg-green-100 text-green-800 border-green-200"
-                                : user.role === "assistance_program_officer"
-                                  ? "bg-green-100 text-green-800 border-green-200"
-                                  : "bg-purple-100 text-purple-800 border-purple-200"
-                        }`}
-                      >
-                        {formatRole(user.role)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{user.branch_name || "No Branch"}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={getStatusBadgeVariant(user.status)}
-                        className={`font-medium ${
-                          user.status === "active"
-                            ? "bg-green-100 text-green-800 border-green-200"
-                            : user.status === "inactive"
-                              ? "bg-gray-100 text-gray-800 border-gray-200"
-                              : "bg-yellow-100 text-yellow-800 border-yellow-200"
-                        }`}
-                      >
-                        {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEditUser(user)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        {user.role !== "admin" && (
-                          <Button variant="outline" size="sm" onClick={() => handleDeleteUser(user)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {users.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">No users found</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Edit User</DialogTitle>
-            <DialogDescription>Update user information and permissions.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
-            <div className="grid gap-2">
-              <Label htmlFor="edit-name">Full Name</Label>
-              <Input
-                id="edit-name"
-                value={editForm.full_name}
-                onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="edit-email">Email</Label>
-              <Input
-                id="edit-email"
-                type="email"
-                value={editForm.email}
-                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="edit-role">Role</Label>
-              <Select
-                value={editForm.role}
-                onValueChange={(value: UserProfile["role"]) => setEditForm({ ...editForm, role: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="branch_manager">Branch Manager</SelectItem>
-                  <SelectItem value="program_officer">Program Officer</SelectItem>
-                  <SelectItem value="assistance_program_officer">Business Development Officer</SelectItem>
-                  <SelectItem value="branch_report_officer">Branch Report Officer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="edit-branch">Branch</Label>
-              <Select
-                value={editForm.branch_id}
-                onValueChange={(value) => setEditForm({ ...editForm, branch_id: value })}
-                disabled={branchesLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={branchesLoading ? "Loading branches..." : "Select branch"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No Branch</SelectItem>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="edit-status">Status</Label>
-              <Select
-                value={editForm.status}
-                onValueChange={(value: UserProfile["status"]) => setEditForm({ ...editForm, status: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="edit-phone">Phone</Label>
-              <Input
-                id="edit-phone"
-                value={editForm.phone}
-                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-              />
-            </div>
-
-            <div className="border-t pt-4">
-              <div className="flex items-center space-x-2 mb-3">
-                <input
-                  type="checkbox"
-                  id="change-password"
-                  checked={editForm.changePassword}
-                  onChange={(e) => setEditForm({ ...editForm, changePassword: e.target.checked, password: "" })}
-                  className="rounded"
-                />
-                <Label htmlFor="change-password" className="text-sm font-medium">
-                  Change Password
-                </Label>
-              </div>
-
-              {editForm.changePassword && (
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-password">New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="edit-password"
-                      type={showEditPassword ? "text" : "password"}
-                      value={editForm.password}
-                      onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
-                      placeholder="Enter new password (min 6 characters)"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowEditPassword(!showEditPassword)}
-                    >
-                      {showEditPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                  {editForm.password && editForm.password.length < 6 && (
-                    <p className="text-sm text-red-600">Password must be at least 6 characters long</p>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleUpdateUser}
-              disabled={isSubmitting || (editForm.changePassword && editForm.password.length < 6)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {isSubmitting ? "Updating..." : "Update User"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete <strong>{userToDelete?.full_name}</strong>? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={confirmDeleteUser}>
-              Delete User
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

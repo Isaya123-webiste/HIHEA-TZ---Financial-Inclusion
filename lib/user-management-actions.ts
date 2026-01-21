@@ -230,8 +230,17 @@ export async function deleteUser(userId: string) {
     const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId)
 
     if (authError) {
+      // Check if the error is "user not found" - this is acceptable since profile is already deleted
+      if (authError.message.includes("user_not_found") || authError.message.includes("User not found")) {
+        console.log("Auth user not found (already deleted or never created), but profile was successfully deleted")
+        revalidatePath("/admin/users")
+        return { success: true, message: "User profile deleted successfully" }
+      }
+      
       console.error("Error deleting auth user:", authError)
-      // Don't fail if auth deletion fails, profile is already deleted
+      // For other errors, still try to revalidate since profile is deleted
+      revalidatePath("/admin/users")
+      return { success: true, message: "User profile deleted successfully (auth user deletion encountered an issue)" }
     }
 
     console.log("User deleted successfully")

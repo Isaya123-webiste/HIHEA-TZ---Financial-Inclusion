@@ -17,6 +17,7 @@ import {
 import type { Project } from "@/lib/projects-crud-actions"
 import { ToastContainer, useToast } from "@/components/toast"
 import ConfirmationDialog from "@/components/ui/confirmation-dialog"
+import PageHeader from "@/components/page-header"
 import {
   Dialog,
   DialogContent,
@@ -247,202 +248,209 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="p-6">
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+    <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-800">
+      {/* Page Header */}
+      <PageHeader title="Projects" />
 
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Projects</h1>
-        <Button onClick={() => setShowCreateModal(true)} className="bg-[#009edb] hover:bg-[#0087b8]">
-          <Plus className="mr-2 h-4 w-4" />
-          Create Project
-        </Button>
-      </div>
+      <div className="p-6">
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-      <div className="mb-6">
-        <Input
-          placeholder="Search projects..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-md"
-          icon={<Search className="h-4 w-4" />}
-        />
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredProjects.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-            <p className="text-muted-foreground">No projects found</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <p className="text-slate-600 dark:text-slate-400 text-sm">Manage system projects and their configurations</p>
           </div>
-        ) : (
-          filteredProjects.map((project) => (
-            <Card key={project.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>{project.name}</span>
-                  <Badge className={getStatusColor(project.status)}>{project.status}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">{getBranchName(project.branch_id)}</p>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEditClick(project)} className="flex-1">
-                      <Edit className="mr-1 h-4 w-4" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteClick(project)}
-                      className="flex-1 text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="mr-1 h-4 w-4" />
-                      Delete
-                    </Button>
+          <Button onClick={() => setShowCreateModal(true)} className="bg-cyan-500 hover:bg-cyan-600 dark:bg-cyan-600 dark:hover:bg-cyan-700 text-white">
+            <Plus className="mr-2 h-4 w-4" />
+            Create Project
+          </Button>
+        </div>
+
+        <div className="mb-6">
+          <Input
+            placeholder="Search projects..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+            icon={<Search className="h-4 w-4" />}
+          />
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredProjects.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <p className="text-muted-foreground">No projects found</p>
+            </div>
+          ) : (
+            filteredProjects.map((project) => (
+              <Card key={project.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>{project.name}</span>
+                    <Badge className={getStatusColor(project.status)}>{project.status}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">{getBranchName(project.branch_id)}</p>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEditClick(project)} className="flex-1">
+                        <Edit className="mr-1 h-4 w-4" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteClick(project)}
+                        className="flex-1 text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="mr-1 h-4 w-4" />
+                        Delete
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+
+        {showDeleteDialog && deletingProject && !projectUsedInReports && (
+          <ConfirmationDialog
+            isOpen={true}
+            onClose={handleDeleteCancel}
+            onConfirm={handleDeleteConfirm}
+            title="Delete The Project?"
+            message={`Are you sure you want to delete the project "${deletingProject.name}"? This action cannot be undone.`}
+            confirmText="Yes, Delete"
+            cancelText="No, Cancel"
+            isDestructive={true}
+            loading={deleteLoading}
+          />
         )}
+
+        {showDeleteWarningModal && deletingProject && projectUsedInReports && (
+          <ConfirmationDialog
+            isOpen={true}
+            onClose={handleDeleteCancel}
+            onConfirm={handleDeleteConfirm}
+            title="Delete The Project?"
+            message={`This project is currently used in Branch Reports. If deleted, all related reports and metrics will be permanently lost. This action cannot be undone.`}
+            confirmText="Yes, Delete"
+            cancelText="No, Cancel"
+            isDestructive={true}
+            loading={deleteLoading}
+            variant="warning"
+          />
+        )}
+
+        {/* Create Modal */}
+        <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create New Project</DialogTitle>
+              <DialogDescription>Add a new NGO project to the system</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Project Name *</label>
+                <Input
+                  placeholder="Enter project name"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Branch *</label>
+                <Select
+                  value={createForm.branch_id}
+                  onValueChange={(value) => setCreateForm({ ...createForm, branch_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateProject} className="bg-[#009edb] hover:bg-[#0087b8]">
+                Create Project
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Modal */}
+        <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Project</DialogTitle>
+              <DialogDescription>Update project details</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Project Name</label>
+                <Input
+                  placeholder="Enter project name"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Branch</label>
+                <Select
+                  value={editForm.branch_id}
+                  onValueChange={(value) => setEditForm({ ...editForm, branch_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <Select
+                  value={editForm.status}
+                  onValueChange={(value: any) => setEditForm({ ...editForm, status: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateProject} className="bg-[#009edb] hover:bg-[#0087b8]">
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {showDeleteDialog && deletingProject && !projectUsedInReports && (
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={handleDeleteCancel}
-          onConfirm={handleDeleteConfirm}
-          title="Delete The Project?"
-          message={`Are you sure you want to delete the project "${deletingProject.name}"? This action cannot be undone.`}
-          confirmText="Yes, Delete"
-          cancelText="No, Cancel"
-          isDestructive={true}
-          loading={deleteLoading}
-        />
-      )}
-
-      {showDeleteWarningModal && deletingProject && projectUsedInReports && (
-        <ConfirmationDialog
-          isOpen={true}
-          onClose={handleDeleteCancel}
-          onConfirm={handleDeleteConfirm}
-          title="Delete The Project?"
-          message={`This project is currently used in Branch Reports. If deleted, all related reports and metrics will be permanently lost. This action cannot be undone.`}
-          confirmText="Yes, Delete"
-          cancelText="No, Cancel"
-          isDestructive={true}
-          loading={deleteLoading}
-          variant="warning"
-        />
-      )}
-
-      {/* Create Modal */}
-      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create New Project</DialogTitle>
-            <DialogDescription>Add a new NGO project to the system</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Project Name *</label>
-              <Input
-                placeholder="Enter project name"
-                value={createForm.name}
-                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Branch *</label>
-              <Select
-                value={createForm.branch_id}
-                onValueChange={(value) => setCreateForm({ ...createForm, branch_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a branch" />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateModal(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateProject} className="bg-[#009edb] hover:bg-[#0087b8]">
-              Create Project
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Modal */}
-      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Project</DialogTitle>
-            <DialogDescription>Update project details</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Project Name</label>
-              <Input
-                placeholder="Enter project name"
-                value={editForm.name}
-                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Branch</label>
-              <Select
-                value={editForm.branch_id}
-                onValueChange={(value) => setEditForm({ ...editForm, branch_id: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a branch" />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
-              <Select
-                value={editForm.status}
-                onValueChange={(value: any) => setEditForm({ ...editForm, status: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditModal(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdateProject} className="bg-[#009edb] hover:bg-[#0087b8]">
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
