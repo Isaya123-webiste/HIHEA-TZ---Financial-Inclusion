@@ -399,6 +399,7 @@ export default function BranchesPage() {
           loading={deleteLoading}
         />
       </div>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   )
 }

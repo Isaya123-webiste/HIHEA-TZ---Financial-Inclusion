@@ -28,6 +28,7 @@ import {
 } from "@/lib/user-management-actions"
 import { getAllBranches } from "@/lib/branch-actions"
 import { toast } from "@/components/ui/use-toast"
+import { Toaster } from "@/components/ui/toaster"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import PageHeader from "@/components/page-header"
 
@@ -144,10 +145,10 @@ export default function UsersPage() {
     } catch (error) {
       console.error("Error loading branches:", error)
       toast({
-        title: "Warning",
-        description: "Failed to load branches",
-        variant: "destructive",
-      })
+          title: "Warning",
+          description: "Failed to load branches",
+          variant: "destructive",
+        })
     } finally {
       setBranchesLoading(false)
     }
@@ -175,10 +176,10 @@ export default function UsersPage() {
     } catch (error) {
       console.error("Error searching users:", error)
       toast({
-        title: "Error",
-        description: "An unexpected error occurred while searching",
-        variant: "destructive",
-      })
+          title: "Error",
+          description: "An unexpected error occurred while searching",
+          variant: "destructive",
+        })
     } finally {
       setLoading(false)
     }
@@ -263,10 +264,10 @@ export default function UsersPage() {
     } catch (error) {
       console.error("Error updating user:", error)
       toast({
-        title: "Error",
-        description: "An unexpected error occurred while updating the user",
-        variant: "destructive",
-      })
+          title: "Error",
+          description: "An unexpected error occurred while updating the user",
+          variant: "destructive",
+        })
     } finally {
       setIsSubmitting(false)
     }
@@ -300,10 +301,10 @@ export default function UsersPage() {
     } catch (error) {
       console.error("Error deleting user:", error)
       toast({
-        title: "Error",
-        description: "An unexpected error occurred while deleting the user",
-        variant: "destructive",
-      })
+          title: "Error",
+          description: "An unexpected error occurred while deleting the user",
+          variant: "destructive",
+        })
     } finally {
       setIsDeleteDialogOpen(false)
       setUserToDelete(null)
@@ -403,10 +404,10 @@ export default function UsersPage() {
     } catch (error) {
       console.error("Error creating user:", error)
       toast({
-        title: "Error",
-        description: "An unexpected error occurred while creating the user",
-        variant: "destructive",
-      })
+          title: "Error",
+          description: "An unexpected error occurred while creating the user",
+          variant: "destructive",
+        })
     } finally {
       setIsSubmitting(false)
     }
