@@ -25,9 +25,7 @@ INSERT INTO "Barriers" (
   "KRI: CARRICULUM RELEVANCE COMPLAINT RATE_Value",
   "KRI: CARRICULUM RELEVANCE COMPLAINT RATE_Weight",
   "KRI: LOW KNOWLEDGE RETENTION RATE_Value",
-  "KRI: LOW KNOWLEDGE RETENTION RATE_Weight",
-  "BARRIERS_Value",
-  "BARRIERS_Weight"
+  "KRI: LOW KNOWLEDGE RETENTION RATE_Weight"
 )
 SELECT 
   br.project_id,
@@ -81,21 +79,7 @@ SELECT
   CASE WHEN (br.members_at_end::numeric) > 0 
     THEN ROUND((1 - ((br.members_applying_loans::numeric) / (br.members_at_end::numeric))), 4) 
     ELSE 0 END,
-  COALESCE(bwc12.weight_value::numeric, 0.083),
-  -- BARRIERS_Value (average of all 12 KRIs)
-  ROUND((
-    (CASE WHEN (br.members_at_end::numeric) > 0 THEN ((br.money_fraud::numeric) / (br.members_at_end::numeric)) ELSE 0 END) +
-    (CASE WHEN (br.members_at_end::numeric) > 0 THEN ((br.trust_erosion::numeric) / (br.members_at_end::numeric)) ELSE 0 END) +
-    (CASE WHEN (br.members_applying_loans::numeric) > 0 THEN ((br.loan_cost_high::numeric) / (br.members_applying_loans::numeric)) ELSE 0 END) +
-    1.0 + 1.0 +
-    (CASE WHEN (br.members_applying_loans::numeric) > 0 THEN ((br.documentation_delay::numeric) / (br.members_applying_loans::numeric)) ELSE 0 END) +
-    0::numeric + 0::numeric +
-    (CASE WHEN (br.members_at_start::numeric) > 0 THEN (((br.members_at_start::numeric) - (br.members_at_end::numeric)) / (br.members_at_start::numeric)) ELSE 0 END) +
-    (CASE WHEN (br.bros_at_start::numeric) > 0 THEN (((br.bros_at_start::numeric) - (br.bros_at_end::numeric)) / (br.bros_at_start::numeric)) ELSE 0 END) +
-    0::numeric +
-    (CASE WHEN (br.members_at_end::numeric) > 0 THEN (1 - ((br.members_applying_loans::numeric) / (br.members_at_end::numeric))) ELSE 0 END)
-  ) / 12.0, 4),
-  1.0
+  COALESCE(bwc12.weight_value::numeric, 0.083)
 FROM (
   -- Get the latest record for each unique (project_id, branch_id) combination
   SELECT DISTINCT ON (project_id, branch_id) 
@@ -142,6 +126,4 @@ ON CONFLICT ("Project ID", "Branch ID") DO UPDATE SET
   "KRI: CARRICULUM RELEVANCE COMPLAINT RATE_Weight" = EXCLUDED."KRI: CARRICULUM RELEVANCE COMPLAINT RATE_Weight",
   "KRI: LOW KNOWLEDGE RETENTION RATE_Value" = EXCLUDED."KRI: LOW KNOWLEDGE RETENTION RATE_Value",
   "KRI: LOW KNOWLEDGE RETENTION RATE_Weight" = EXCLUDED."KRI: LOW KNOWLEDGE RETENTION RATE_Weight",
-  "BARRIERS_Value" = EXCLUDED."BARRIERS_Value",
-  "BARRIERS_Weight" = EXCLUDED."BARRIERS_Weight",
   updated_at = NOW();
