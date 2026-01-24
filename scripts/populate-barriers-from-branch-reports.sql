@@ -32,17 +32,17 @@ SELECT
   br.branch_id,
   -- FRAUD INCIDENT RATE = money_fraud ÷ members_at_end
   CASE WHEN (br.members_at_end::numeric) > 0 
-    THEN ROUND(((br.money_fraud::numeric) / (br.members_at_end::numeric)), 4) 
+    THEN ROUND(((br.money_fraud::numeric) / (br.members_at_end::numeric)), 2) 
     ELSE 0 END,
   COALESCE(bwc1.weight_value::numeric, 0.083),
   -- TRUST EROSION IN MFIs = trust_erosion ÷ members_at_end
   CASE WHEN (br.members_at_end::numeric) > 0 
-    THEN ROUND(((br.trust_erosion::numeric) / (br.members_at_end::numeric)), 4) 
+    THEN ROUND(((br.trust_erosion::numeric) / (br.members_at_end::numeric)), 2) 
     ELSE 0 END,
   COALESCE(bwc2.weight_value::numeric, 0.083),
   -- MEMBERS LOAN COST = loan_cost_high ÷ members_applying_loans
   CASE WHEN (br.members_applying_loans::numeric) > 0 
-    THEN ROUND(((br.loan_cost_high::numeric) / (br.members_applying_loans::numeric)), 4) 
+    THEN ROUND(((br.loan_cost_high::numeric) / (br.members_applying_loans::numeric)), 2) 
     ELSE 0 END,
   COALESCE(bwc3.weight_value::numeric, 0.083),
   -- HAND IN HAND LOAN COST = 100 ÷ 100 = 1
@@ -53,7 +53,7 @@ SELECT
   COALESCE(bwc5.weight_value::numeric, 0.083),
   -- DOCUMENTATION DELAY RATE = documentation_delay ÷ members_applying_loans
   CASE WHEN (br.members_applying_loans::numeric) > 0 
-    THEN ROUND(((br.documentation_delay::numeric) / (br.members_applying_loans::numeric)), 4) 
+    THEN ROUND(((br.documentation_delay::numeric) / (br.members_applying_loans::numeric)), 2) 
     ELSE 0 END,
   COALESCE(bwc6.weight_value::numeric, 0.083),
   -- GENDER BASED BARRIER RATE = 0 ÷ members_at_end
@@ -64,12 +64,12 @@ SELECT
   COALESCE(bwc8.weight_value::numeric, 0.083),
   -- TRAINEE DROPOUT RATE = (members_at_start - members_at_end) ÷ members_at_start
   CASE WHEN (br.members_at_start::numeric) > 0 
-    THEN ROUND((((br.members_at_start::numeric) - (br.members_at_end::numeric)) / (br.members_at_start::numeric)), 4) 
+    THEN ROUND((((br.members_at_start::numeric) - (br.members_at_end::numeric)) / (br.members_at_start::numeric)), 2) 
     ELSE 0 END,
   COALESCE(bwc9.weight_value::numeric, 0.083),
   -- TRAINER DROPOUT RATE = (bros_at_start - bros_at_end) ÷ bros_at_start
   CASE WHEN (br.bros_at_start::numeric) > 0 
-    THEN ROUND((((br.bros_at_start::numeric) - (br.bros_at_end::numeric)) / (br.bros_at_start::numeric)), 4) 
+    THEN ROUND((((br.bros_at_start::numeric) - (br.bros_at_end::numeric)) / (br.bros_at_start::numeric)), 2) 
     ELSE 0 END,
   COALESCE(bwc10.weight_value::numeric, 0.083),
   -- CURRICULUM RELEVANCE COMPLAINT RATE = 0 ÷ members_at_end
@@ -77,7 +77,7 @@ SELECT
   COALESCE(bwc11.weight_value::numeric, 0.083),
   -- LOW KNOWLEDGE RETENTION RATE = 1 - (members_applying_loans ÷ members_at_end)
   CASE WHEN (br.members_at_end::numeric) > 0 
-    THEN ROUND((1 - ((br.members_applying_loans::numeric) / (br.members_at_end::numeric))), 4) 
+    THEN ROUND((1 - ((br.members_applying_loans::numeric) / (br.members_at_end::numeric))), 2) 
     ELSE 0 END,
   COALESCE(bwc12.weight_value::numeric, 0.083)
 FROM (

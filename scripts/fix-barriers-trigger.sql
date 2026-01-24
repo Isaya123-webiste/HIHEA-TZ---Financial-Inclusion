@@ -42,18 +42,18 @@ DECLARE
   v_row_count INTEGER;
 BEGIN
   -- Calculate KRI Values using your exact formulas
-  v_fraud_rate := CASE WHEN COALESCE(NEW.members_at_end, 0) > 0 THEN ROUND((COALESCE(NEW.money_fraud, 0)::numeric / NEW.members_at_end::numeric), 4) ELSE 0 END;
-  v_trust_rate := CASE WHEN COALESCE(NEW.members_at_end, 0) > 0 THEN ROUND((COALESCE(NEW.trust_erosion, 0)::numeric / NEW.members_at_end::numeric), 4) ELSE 0 END;
-  v_members_loan_cost := CASE WHEN COALESCE(NEW.members_applying_loans, 0) > 0 THEN ROUND((COALESCE(NEW.loan_cost_high, 0)::numeric / NEW.members_applying_loans::numeric), 4) ELSE 0 END;
+  v_fraud_rate := CASE WHEN COALESCE(NEW.members_at_end, 0) > 0 THEN ROUND((COALESCE(NEW.money_fraud, 0)::numeric / NEW.members_at_end::numeric), 2) ELSE 0 END;
+  v_trust_rate := CASE WHEN COALESCE(NEW.members_at_end, 0) > 0 THEN ROUND((COALESCE(NEW.trust_erosion, 0)::numeric / NEW.members_at_end::numeric), 2) ELSE 0 END;
+  v_members_loan_cost := CASE WHEN COALESCE(NEW.members_applying_loans, 0) > 0 THEN ROUND((COALESCE(NEW.loan_cost_high, 0)::numeric / NEW.members_applying_loans::numeric), 2) ELSE 0 END;
   v_hand_in_hand_cost := 1.0; -- 100 ÷ 100 = 1
   v_mfi_loan_cost := 1.0; -- 100% = 1
-  v_doc_delay_rate := CASE WHEN COALESCE(NEW.members_applying_loans, 0) > 0 THEN ROUND((COALESCE(NEW.documentation_delay, 0)::numeric / NEW.members_applying_loans::numeric), 4) ELSE 0 END;
-  v_gender_barrier_rate := CASE WHEN COALESCE(NEW.members_at_end, 0) > 0 THEN ROUND((0::numeric / NEW.members_at_end::numeric), 4) ELSE 0 END;
-  v_family_barrier_rate := CASE WHEN COALESCE(NEW.members_at_end, 0) > 0 THEN ROUND((0::numeric / NEW.members_at_end::numeric), 4) ELSE 0 END;
-  v_trainee_dropout := CASE WHEN COALESCE(NEW.members_at_start, 0) > 0 THEN ROUND(((NEW.members_at_start - COALESCE(NEW.members_at_end, 0))::numeric / NEW.members_at_start::numeric), 4) ELSE 0 END;
-  v_trainer_dropout := CASE WHEN COALESCE(NEW.bros_at_start, 0) > 0 THEN ROUND(((NEW.bros_at_start - COALESCE(NEW.bros_at_end, 0))::numeric / NEW.bros_at_start::numeric), 4) ELSE 0 END;
-  v_curriculum_complaint := CASE WHEN COALESCE(NEW.members_at_end, 0) > 0 THEN ROUND((0::numeric / NEW.members_at_end::numeric), 4) ELSE 0 END;
-  v_knowledge_retention := CASE WHEN COALESCE(NEW.members_at_end, 0) > 0 THEN ROUND((1 - (COALESCE(NEW.members_applying_loans, 0)::numeric / NEW.members_at_end::numeric)), 4) ELSE 0 END;
+  v_doc_delay_rate := CASE WHEN COALESCE(NEW.members_applying_loans, 0) > 0 THEN ROUND((COALESCE(NEW.documentation_delay, 0)::numeric / NEW.members_applying_loans::numeric), 2) ELSE 0 END;
+  v_gender_barrier_rate := CASE WHEN COALESCE(NEW.members_at_end, 0) > 0 THEN ROUND((0::numeric / NEW.members_at_end::numeric), 2) ELSE 0 END;
+  v_family_barrier_rate := CASE WHEN COALESCE(NEW.members_at_end, 0) > 0 THEN ROUND((0::numeric / NEW.members_at_end::numeric), 2) ELSE 0 END;
+  v_trainee_dropout := CASE WHEN COALESCE(NEW.members_at_start, 0) > 0 THEN ROUND(((NEW.members_at_start - COALESCE(NEW.members_at_end, 0))::numeric / NEW.members_at_start::numeric), 2) ELSE 0 END;
+  v_trainer_dropout := CASE WHEN COALESCE(NEW.bros_at_start, 0) > 0 THEN ROUND(((NEW.bros_at_start - COALESCE(NEW.bros_at_end, 0))::numeric / NEW.bros_at_start::numeric), 2) ELSE 0 END;
+  v_curriculum_complaint := CASE WHEN COALESCE(NEW.members_at_end, 0) > 0 THEN ROUND((0::numeric / NEW.members_at_end::numeric), 2) ELSE 0 END;
+  v_knowledge_retention := CASE WHEN COALESCE(NEW.members_at_end, 0) > 0 THEN ROUND((1 - (COALESCE(NEW.members_applying_loans, 0)::numeric / NEW.members_at_end::numeric)), 2) ELSE 0 END;
 
   -- Fetch KRI weights from barriers_weights_config
   SELECT COALESCE(weight_value, 0.083) INTO v_fraud_weight FROM barriers_weights_config WHERE metric_key = 'FRAUD_INCIDENT_RATE' LIMIT 1;
