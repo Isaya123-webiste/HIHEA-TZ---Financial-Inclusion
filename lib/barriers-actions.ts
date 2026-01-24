@@ -180,3 +180,74 @@ export async function getBarriersByProjectId(projectId: string) {
     return { success: false, error: error?.message || "Failed to fetch barriers data" }
   }
 }
+
+/**
+ * Update all Barriers table rows with KRI weights from barriers_weights_config
+ */
+export async function populateBarriersWeights() {
+  try {
+    console.log("[v0] Fetching barriers weights from barriers_weights_config")
+
+    // Fetch all weights from config table
+    const { data: weightsData, error: weightsError } = await supabaseAdmin
+      .from("barriers_weights_config")
+      .select("metric_key, weight_value")
+
+    if (weightsError) {
+      console.error("[v0] Error fetching barriers weights:", weightsError)
+      return { success: false, error: `Failed to fetch barriers weights: ${weightsError.message}` }
+    }
+
+    console.log("[v0] Fetched weights:", weightsData?.length || 0, "KRIs")
+
+    // Map metric_key to Barriers table column names
+    const columnMapping: { [key: string]: string } = {
+      FRAUD_INCIDENT_RATE: "KRI: FRAUD INCIDENT RATE_Weight",
+      TRUST_EROSION_IN_MFIs: "KRI: TRUST EROSION IN MFIs_Weight",
+      MEMBERS_LOAN_COST: "KRI: MEMBERS LOAN COST_Weight",
+      HAND_IN_HAND_LOAN_COST: "KRI: HAND IN HAND LOAN COST_Weight",
+      MFI_LOAN_SERVICE_COST: "KRI: MFI LOAN SERVICE COST_Weight",
+      DOCUMENTATION_DELAY_RATE: "KRI: DOCUMENTATION DELAY RATE_Weight",
+      GENDER_BASED_BARRIER_RATE: "KRI: GENDER BASED BARRIER RATE_Weight",
+      FAMILY_AND_COMMUNITY_BARRIER_RATE: "KRI: FAMILY AND COMMUNITY BARRIER RATE_Weight",
+      TRAINEE_DROPOUT_RATE: "KRI: TRAINEE DROPOUT RATE_Weight",
+      TRAINER_DROPOUT_RATE: "KRI: TRAINER DROPOUT RATE_Weight",
+      CURRICULUM_RELEVANCE_COMPLAINT_RATE: "KRI: CURRICULUM RELEVANCE COMPLAINT RATE_Weight",
+      LOW_KNOWLEDGE_RETENTION_RATE: "KRI: LOW KNOWLEDGE RETENTION RATE_Weight",
+    }
+
+    // Build update object with all weights
+    const updateObject: { [key: string]: number } = {}
+    weightsData?.forEach((weight) => {
+      const columnName = columnMapping[weight.metric_key]
+      if (columnName) {
+        updateObject[columnName] = weight.weight_value
+      }
+    })
+
+    if (Object.keys(updateObject).length === 0) {
+      console.warn("[v0] No valid weights found to update")
+      return { success: false, error: "No valid weights found in barriers_weights_config" }
+    }
+
+    console.log("[v0] Updating all Barriers rows with weights:", Object.keys(updateObject).length, "columns")
+
+    // Update all barriers rows with the weights
+    const { data, error: updateError } = await supabaseAdmin
+      .from("Barriers")
+      .update(updateObject)
+      .not("id", "is", null)
+      .select()
+
+    if (updateError) {
+      console.error("[v0] Error updating barriers weights:", updateError)
+      return { success: false, error: `Failed to update barriers weights: ${updateError.message}` }
+    }
+
+    console.log("[v0] Successfully populated barriers weights for", data?.length || 0, "rows")
+    return { success: true, data, updatedCount: data?.length || 0 }
+  } catch (error: any) {
+    console.error("[v0] Exception in populateBarriersWeights:", error)
+    return { success: false, error: error?.message || "Failed to populate barriers weights" }
+  }
+}
