@@ -180,7 +180,7 @@ export async function updateAccessWeight(metricKey: string, newValue: number) {
   }
 }
 
-// Update a weight value in barriers_weights_config
+// Update a weight value in barriers_weights_config AND Update the corresponding column in Barriers table
 export async function updateBarriersWeight(metricKey: string, newValue: number) {
   try {
     console.log(`[v0] Updating BARRIERS weight: ${metricKey} to ${newValue}`)
@@ -198,6 +198,39 @@ export async function updateBarriersWeight(metricKey: string, newValue: number) 
     if (weightError) {
       console.error("[v0] Error updating barriers_weights_config:", weightError)
       return { success: false, error: `Failed to update BARRIERS weight: ${weightError.message}` }
+    }
+
+    // Map metric_key to Barriers table column names
+    const columnMapping: { [key: string]: string } = {
+      FRAUD_INCIDENT_RATE: "KRI: FRAUD INCIDENT RATE_Weight",
+      TRUST_EROSION_IN_MFIs: "KRI: TRUST EROSION IN MFIs_Weight",
+      MEMBERS_LOAN_COST: "KRI: MEMBERS LOAN COST_Weight",
+      HAND_IN_HAND_LOAN_COST: "KRI: HAND IN HAND LOAN COST_Weight",
+      MFI_LOAN_SERVICE_COST: "KRI: MFI LOAN SERVICE COST_Weight",
+      DOCUMENTATION_DELAY_RATE: "KRI: DOCUMENTATION DELAY RATE_Weight",
+      GENDER_BASED_BARRIER_RATE: "KRI: GENDER BASED BARRIER RATE_Weight",
+      FAMILY_AND_COMMUNITY_BARRIER_RATE: "KRI: FAMILY AND COMMUNITY BARRIER RATE_Weight",
+      TRAINEE_DROPOUT_RATE: "KRI: TRAINEE DROPOUT RATE_Weight",
+      TRAINER_DROPOUT_RATE: "KRI: TRAINER DROPOUT RATE_Weight",
+      CURRICULUM_RELEVANCE_COMPLAINT_RATE: "KRI: CURRICULUM RELEVANCE COMPLAINT RATE_Weight",
+      LOW_KNOWLEDGE_RETENTION_RATE: "KRI: LOW KNOWLEDGE RETENTION RATE_Weight",
+    }
+
+    const barriersColumn = columnMapping[metricKey]
+
+    if (barriersColumn) {
+      const { error: barriersError } = await supabaseAdmin
+        .from("Barriers")
+        .update({
+          [barriersColumn]: newValue,
+        })
+        .not(barriersColumn, "is", null)
+
+      if (barriersError) {
+        console.warn("[v0] Warning: Failed to update Barriers table:", barriersError)
+      } else {
+        console.log(`[v0] Successfully updated Barriers table column: ${barriersColumn}`)
+      }
     }
 
     console.log("[v0] BARRIERS weight updated successfully")
