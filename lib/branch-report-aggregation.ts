@@ -70,10 +70,14 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
       bros_at_end: parseInt(formData.bros_at_end, 0),
     }
 
+    // Numeric fields to sum (for aggregation - now loan_uses is numeric)
+    const numericAggregationFields = {
+      loan_uses: parseInt(formData.loan_uses, 0),
+      loan_cost_high: parseInt(formData.loan_cost_high, 0),
+    }
+
     // Text fields to concatenate
     const textFields = {
-      loan_uses: formData.loan_uses || "",
-      loan_cost_high: formData.loan_cost_high || "",
       explain_barriers: formData.explain_barriers || "",
     }
 
@@ -97,6 +101,13 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
       Object.keys(numericData).forEach((field) => {
         const currentValue = existingReport[field] || 0
         const newValue = numericData[field as keyof typeof numericData]
+        updates[field] = currentValue + newValue
+      })
+
+      // Sum numeric aggregation fields (loan_uses, loan_cost_high)
+      Object.keys(numericAggregationFields).forEach((field) => {
+        const currentValue = existingReport[field] || 0
+        const newValue = numericAggregationFields[field as keyof typeof numericAggregationFields]
         updates[field] = currentValue + newValue
       })
 

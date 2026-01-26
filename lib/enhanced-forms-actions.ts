@@ -38,7 +38,7 @@ export interface FormSubmission {
   members_received_loans?: number
   date_loan_received?: string
   members_complaining_delay?: number
-  loan_uses?: string
+  loan_uses?: number
   loan_default?: number
   loan_delinquency?: number
   loan_dropout?: number
@@ -81,7 +81,7 @@ function extractFormFields(formData: any): any {
     members_received_loans: formData.members_received_loans || 0,
     date_loan_received: formData.date_loan_received || null,
     members_complaining_delay: formData.members_complaining_delay || 0,
-    loan_uses: formData.loan_uses || null,
+    loan_uses: formData.loan_uses || 0,
     loan_default: formData.loan_default || 0,
     loan_delinquency: formData.loan_delinquency || 0,
     loan_dropout: formData.loan_dropout || 0,
@@ -477,7 +477,7 @@ export async function submitForm(userId: string, formData: any) {
       bros_at_start: formData.bros_at_start ? parseInt(formData.bros_at_start) || 0 : 0,
       bros_at_end: formData.bros_at_end ? parseInt(formData.bros_at_end) || 0 : 0,
       credit_sources: formData.credit_sources || null,
-      loan_uses: formData.loan_uses || null,
+      loan_uses: formData.loan_uses ? parseInt(formData.loan_uses) || 0 : 0,
       trust_erosion: formData.trust_erosion || null,
       documentation_delay: formData.documentation_delay || null,
       loan_cost_high: formData.loan_cost_high ? parseInt(formData.loan_cost_high) || 0 : 0,
@@ -834,7 +834,7 @@ export async function updateFormByProgramOfficer(formId: string, programOfficerI
       bros_at_start: typeof formData.bros_at_start === "number" ? formData.bros_at_start : parseInt(formData.bros_at_start) || 0,
       bros_at_end: typeof formData.bros_at_end === "number" ? formData.bros_at_end : parseInt(formData.bros_at_end) || 0,
       credit_sources: formData.credit_sources || null,
-      loan_uses: formData.loan_uses || null,
+      loan_uses: typeof formData.loan_uses === "number" ? formData.loan_uses : parseInt(formData.loan_uses) || 0,
       trust_erosion: formData.trust_erosion || null,
       documentation_delay: formData.documentation_delay || null,
       loan_cost_high: typeof formData.loan_cost_high === "number" ? formData.loan_cost_high : parseInt(formData.loan_cost_high) || 0,

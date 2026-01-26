@@ -22,7 +22,7 @@ export interface FormSubmission {
   members_received_loans: number
   date_loan_received: string
   members_complaining_delay: number
-  loan_uses: string
+  loan_uses: number
   loan_default: number
   loan_delinquency: number
   loan_dropout: number
@@ -92,7 +92,7 @@ export async function saveDraftForm(userId: string, formData: any) {
       members_received_loans: Number.parseInt(formData.members_received_loans) || 0,
       date_loan_received: formData.date_loan_received || null,
       members_complaining_delay: Number.parseInt(formData.members_complaining_delay) || 0,
-      loan_uses: formData.loan_uses || "",
+      loan_uses: Number.parseInt(formData.loan_uses) || 0,
       loan_default: Number.parseFloat(formData.loan_default) || 0,
       loan_delinquency: Number.parseFloat(formData.loan_delinquency) || 0,
       loan_dropout: Number.parseInt(formData.loan_dropout) || 0,
@@ -191,7 +191,7 @@ export async function submitForm(userId: string, formData: any) {
       members_received_loans: Number.parseInt(formData.members_received_loans) || 0,
       date_loan_received: formData.date_loan_received || null,
       members_complaining_delay: Number.parseInt(formData.members_complaining_delay) || 0,
-      loan_uses: formData.loan_uses || "",
+      loan_uses: Number.parseInt(formData.loan_uses) || 0,
       loan_default: Number.parseFloat(formData.loan_default) || 0,
       loan_delinquency: Number.parseFloat(formData.loan_delinquency) || 0,
       loan_dropout: Number.parseInt(formData.loan_dropout) || 0,

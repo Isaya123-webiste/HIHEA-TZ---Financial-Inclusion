@@ -234,9 +234,9 @@ export default function BranchReportOfficerForms() {
       id: "loan_uses",
       name: "loan_uses",
       label: "Loan uses (write only members with 3 value chain activities)",
-      type: "textarea",
+      type: "number",
       required: true,
-      placeholder: "Describe loan uses for members with 3 value chain activities",
+      placeholder: "0",
     },
     {
       id: "loan_delinquency",
