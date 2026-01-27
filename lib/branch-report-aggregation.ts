@@ -17,12 +17,13 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
       return { success: false, error: "Missing required parameters for aggregation" }
     }
 
-    // Fetch existing branch report
-    const query = supabaseAdmin.from("branch_reports").select("*").eq("branch_id", branchId)
+    // Fetch existing branch report - must match both branch_id AND project_id (if provided)
+    let query = supabaseAdmin.from("branch_reports").select("*").eq("branch_id", branchId)
 
-    // If projectId is provided, look for a report with that project_id
     if (projectId) {
-      query.eq("project_id", projectId)
+      query = query.eq("project_id", projectId)
+    } else {
+      query = query.is("project_id", null)
     }
 
     const { data: existingReports, error: fetchError } = await query.limit(1)
