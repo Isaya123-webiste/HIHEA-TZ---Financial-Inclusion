@@ -84,7 +84,7 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
         members_received_loans: form.members_received_loans || 0,
         date_loan_received: form.date_loan_received || "",
         members_complaining_delay: form.members_complaining_delay || 0,
-        loan_uses: form.loan_uses || "",
+        loan_uses: form.loan_uses || 0,
         loan_default: form.loan_default || 0,
         loan_delinquency: form.loan_delinquency || 0,
         loan_dropout: form.loan_dropout || 0,
@@ -488,12 +488,12 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
           <div className="space-y-4">
             <div>
               <Label htmlFor="loan_uses">Loan uses (write only members with 3 value chain activities) *</Label>
-              <Textarea
+              <Input
                 id="loan_uses"
+                type="number"
                 value={formData.loan_uses || ""}
-                onChange={(e) => setFormData({ ...formData, loan_uses: e.target.value })}
-                placeholder="Describe loan uses for members with 3 value chain activities"
-                rows={4}
+                onChange={(e) => setFormData({ ...formData, loan_uses: Number.parseInt(e.target.value) || 0 })}
+                placeholder="0"
               />
             </div>
 
