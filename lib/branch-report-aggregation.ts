@@ -165,6 +165,7 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
         total_approved_forms: 1,
         last_aggregated_form_id: formId,
         ...numericData,
+        ...numericAggregationFields,
         ...textFields,
       }
 
