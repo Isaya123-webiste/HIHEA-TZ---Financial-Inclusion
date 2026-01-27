@@ -5,9 +5,15 @@ import { upsertUsageWithKRIs } from "./usage-actions"
 
 export async function aggregateFormToBranchReport(formId: string, branchId: string, formData: any, projectId?: string) {
   try {
-    console.log("Aggregating form to branch report:", formId, "for branch:", branchId, "project:", projectId)
+    console.log("[v0] ========== STARTING AGGREGATION ==========")
+    console.log("[v0] Aggregating form to branch report:", formId)
+    console.log("[v0] Branch ID:", branchId)
+    console.log("[v0] Project ID:", projectId)
+    console.log("[v0] Form data received keys:", Object.keys(formData))
+    console.log("[v0] Form data values:", formData)
 
     if (!formId || !branchId || !formData) {
+      console.log("[v0] Missing required parameters:", { formId, branchId, formData: !!formData })
       return { success: false, error: "Missing required parameters for aggregation" }
     }
 
@@ -21,16 +27,20 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
 
     const { data: existingReports, error: fetchError } = await query.limit(1)
 
+    console.log("[v0] Fetch error:", fetchError?.message || "None")
+    console.log("[v0] Existing reports found:", existingReports?.length || 0)
+
     if (fetchError && fetchError.code !== "PGRST116") {
-      console.error("Error fetching branch report:", fetchError)
+      console.error("[v0] Error fetching branch report:", fetchError)
       return { success: false, error: `Failed to fetch branch report: ${fetchError.message}` }
     }
 
     const existingReport = existingReports && existingReports.length > 0 ? existingReports[0] : null
 
-    // Check if this form has already been aggregated
+    console.log("[v0] Existing report found:", !!existingReport)
+
     if (existingReport?.aggregated_form_ids && existingReport.aggregated_form_ids.includes(formId)) {
-      console.log("Form already aggregated, skipping")
+      console.log("[v0] Form already aggregated, skipping")
       return { success: true, message: "Form already aggregated" }
     }
 
@@ -128,19 +138,21 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
         }
       })
 
-      console.log("Updating existing branch report with:", updates)
+      console.log("[v0] Updating existing branch report with:", updates)
 
       const { error: updateError } = await supabaseAdmin
         .from("branch_reports")
         .update(updates)
         .eq("id", existingReport.id)
 
+      console.log("[v0] Update error:", updateError?.message || "None")
+
       if (updateError) {
-        console.error("Error updating branch report:", updateError)
+        console.error("[v0] Error updating branch report:", updateError)
         return { success: false, error: `Failed to update branch report: ${updateError.message}` }
       }
 
-      console.log("Branch report updated successfully")
+      console.log("[v0] Branch report updated successfully")
 
       try {
         const updatedReport = { ...existingReport, ...updates }
@@ -176,16 +188,18 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
         documentation_delay: additionalNumericFields.documentation_delay.toString(),
       }
 
-      console.log("Creating new branch report with:", reportWithStringFields)
+      console.log("[v0] Creating new branch report with:", reportWithStringFields)
 
       const { error: insertError } = await supabaseAdmin.from("branch_reports").insert(reportWithStringFields)
 
+      console.log("[v0] Insert error:", insertError?.message || "None")
+
       if (insertError) {
-        console.error("Error creating branch report:", insertError)
+        console.error("[v0] Error creating branch report:", insertError)
         return { success: false, error: `Failed to create branch report: ${insertError.message}` }
       }
 
-      console.log("Branch report created successfully")
+      console.log("[v0] Branch report created successfully")
 
       try {
         await upsertUsageWithKRIs(reportWithStringFields, projectId, branchId)
@@ -197,9 +211,11 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
       return { success: true, message: "Branch report created successfully" }
     }
   } catch (error: any) {
-    console.error("Unexpected error in aggregateFormToBranchReport:", error)
-    return { success: false, error: error.message || "An unexpected error occurred during aggregation" }
+    console.error("[v0] Unexpected error in aggregateFormToBranchReport:", error)
+    console.log("[v0] ========== AGGREGATION FAILED ==========")
+    return { success: false, error: `Unexpected error: ${error.message}` }
   }
+}
 }
 
 export async function getBranchReportData(branchId: string, projectId?: string) {
