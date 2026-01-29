@@ -48,7 +48,7 @@ BEGIN
   -- 2. TRUST EROSION IN MFIs = trust_erosion ÷ members_at_end
   v_trust_erosion := CASE
     WHEN NEW.members_at_end = 0 OR NEW.members_at_end IS NULL THEN 0
-    ELSE ROUND((COALESCE(NEW.trust_erosion, 0)::numeric / NEW.members_at_end::numeric) * 100, 2)
+    ELSE ROUND((COALESCE(NULLIF(NEW.trust_erosion, '')::numeric, 0) / NEW.members_at_end::numeric) * 100, 2)
   END;
 
   -- 3. MEMBERS LOAN COST = loan_cost_high ÷ members_applying_loans
@@ -66,7 +66,7 @@ BEGIN
   -- 6. DOCUMENTATION DELAY RATE = documentation_delay ÷ members_applying_loans
   v_documentation_delay_rate := CASE
     WHEN NEW.members_applying_loans = 0 OR NEW.members_applying_loans IS NULL THEN 0
-    ELSE ROUND((COALESCE(NEW.documentation_delay, 0)::numeric / NEW.members_applying_loans::numeric) * 100, 2)
+    ELSE ROUND((COALESCE(NULLIF(NEW.documentation_delay, '')::numeric, 0) / NEW.members_applying_loans::numeric) * 100, 2)
   END;
 
   -- 7. GENDER BASED BARRIER RATE = 0 ÷ members_at_end = 0
