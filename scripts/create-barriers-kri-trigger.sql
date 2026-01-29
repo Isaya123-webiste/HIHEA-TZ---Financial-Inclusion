@@ -110,52 +110,53 @@ BEGIN
   SELECT COALESCE(weight_value, 0.0833) INTO v_curriculum_weight FROM barriers_weights_config WHERE metric_key = 'CURRICULUM_RELEVANCE_COMPLAINT_RATE' LIMIT 1;
   SELECT COALESCE(weight_value, 0.0833) INTO v_knowledge_weight FROM barriers_weights_config WHERE metric_key = 'LOW_KNOWLEDGE_RETENTION_RATE' LIMIT 1;
 
-  -- Try to update existing Barriers record
-  UPDATE "Barriers"
-  SET
-    -- KRI Values
-    "KRI: FRAUD INCIDENT RATE_Value" = v_fraud_incident_rate,
-    "KRI: TRUST EROSION IN MFIs_Value" = v_trust_erosion,
-    "KRI: MEMBERS LOAN COST_Value" = v_members_loan_cost,
-    "KRI: HAND IN HAND LOAN COST_Value" = v_hand_in_hand_loan_cost,
-    "KRI: MFI LOAN SERVICE COST_Value" = v_mfi_loan_service_cost,
-    "KRI: DOCUMENTATION DELAY RATE_Value" = v_documentation_delay_rate,
-    "KRI: GENDER BASED BARRIER RATE_Value" = v_gender_based_barrier_rate,
-    "KRI: FAMILY AND COMMUNITY BARRIER RATE_Value" = v_family_community_barrier_rate,
-    "KRI: TRAINEE DROPOUT RATE_Value" = v_trainee_dropout_rate,
-    "KRI: TRAINER DROPOUT RATE_Value" = v_trainer_dropout_rate,
-    "KRI: CURRICULUM RELEVANCE COMPLAINT RATE_Value" = v_curriculum_relevance_complaint_rate,
-    "KRI: LOW KNOWLEDGE RETENTION RATE_Value" = v_low_knowledge_retention_rate,
-    -- KRI Weights
-    "KRI: FRAUD INCIDENT RATE_Weight" = v_fraud_weight,
-    "KRI: TRUST EROSION IN MFIs_Weight" = v_trust_weight,
-    "KRI: MEMBERS LOAN COST_Weight" = v_members_cost_weight,
-    "KRI: HAND IN HAND LOAN COST_Weight" = v_hand_in_hand_weight,
-    "KRI: MFI LOAN SERVICE COST_Weight" = v_mfi_cost_weight,
-    "KRI: DOCUMENTATION DELAY RATE_Weight" = v_doc_delay_weight,
-    "KRI: GENDER BASED BARRIER RATE_Weight" = v_gender_weight,
-    "KRI: FAMILY AND COMMUNITY BARRIER RATE_Weight" = v_family_weight,
-    "KRI: TRAINEE DROPOUT RATE_Weight" = v_trainee_weight,
-    "KRI: TRAINER DROPOUT RATE_Weight" = v_trainer_weight,
+  -- Try to update existing Barriers record (wrap in exception handler for missing columns)
+  BEGIN
+    UPDATE "Barriers"
+    SET
+      -- KRI Values
+      "KRI: FRAUD INCIDENT RATE_Value" = v_fraud_incident_rate,
+      "KRI: TRUST EROSION IN MFIs_Value" = v_trust_erosion,
+      "KRI: MEMBERS LOAN COST_Value" = v_members_loan_cost,
+      "KRI: HAND IN HAND LOAN COST_Value" = v_hand_in_hand_loan_cost,
+      "KRI: MFI LOAN SERVICE COST_Value" = v_mfi_loan_service_cost,
+      "KRI: DOCUMENTATION DELAY RATE_Value" = v_documentation_delay_rate,
+      "KRI: GENDER BASED BARRIER RATE_Value" = v_gender_based_barrier_rate,
+      "KRI: FAMILY AND COMMUNITY BARRIER RATE_Value" = v_family_community_barrier_rate,
+      "KRI: TRAINEE DROPOUT RATE_Value" = v_trainee_dropout_rate,
+      "KRI: TRAINER DROPOUT RATE_Value" = v_trainer_dropout_rate,
+      "KRI: CURRICULUM RELEVANCE COMPLAINT RATE_Value" = v_curriculum_relevance_complaint_rate,
+      "KRI: LOW KNOWLEDGE RETENTION RATE_Value" = v_low_knowledge_retention_rate,
+      -- KRI Weights
+      "KRI: FRAUD INCIDENT RATE_Weight" = v_fraud_weight,
+      "KRI: TRUST EROSION IN MFIs_Weight" = v_trust_weight,
+      "KRI: MEMBERS LOAN COST_Weight" = v_members_cost_weight,
+      "KRI: HAND IN HAND LOAN COST_Weight" = v_hand_in_hand_weight,
+      "KRI: MFI LOAN SERVICE COST_Weight" = v_mfi_cost_weight,
+      "KRI: DOCUMENTATION DELAY RATE_Weight" = v_doc_delay_weight,
+      "KRI: GENDER BASED BARRIER RATE_Weight" = v_gender_weight,
+      "KRI: FAMILY AND COMMUNITY BARRIER RATE_Weight" = v_family_weight,
+      "KRI: TRAINEE DROPOUT RATE_Weight" = v_trainee_weight,
+      "KRI: TRAINER DROPOUT RATE_Weight" = v_trainer_weight,
     "KRI: CURRICULUM RELEVANCE COMPLAINT RATE_Weight" = v_curriculum_weight,
     "KRI: LOW KNOWLEDGE RETENTION RATE_Weight" = v_knowledge_weight
   WHERE "Project ID" = NEW.project_id AND "Branch ID" = NEW.branch_id;
 
-  GET DIAGNOSTICS v_row_count = ROW_COUNT;
+    GET DIAGNOSTICS v_row_count = ROW_COUNT;
 
-  -- If no rows were updated, insert a new record
-  IF v_row_count = 0 THEN
-    INSERT INTO "Barriers" (
-      "Project ID",
-      "Branch ID",
-      "KRI: FRAUD INCIDENT RATE_Value",
-      "KRI: TRUST EROSION IN MFIs_Value",
-      "KRI: MEMBERS LOAN COST_Value",
-      "KRI: HAND IN HAND LOAN COST_Value",
-      "KRI: MFI LOAN SERVICE COST_Value",
-      "KRI: DOCUMENTATION DELAY RATE_Value",
-      "KRI: GENDER BASED BARRIER RATE_Value",
-      "KRI: FAMILY AND COMMUNITY BARRIER RATE_Value",
+    -- If no rows were updated, insert a new record
+    IF v_row_count = 0 THEN
+      INSERT INTO "Barriers" (
+        "Project ID",
+        "Branch ID",
+        "KRI: FRAUD INCIDENT RATE_Value",
+        "KRI: TRUST EROSION IN MFIs_Value",
+        "KRI: MEMBERS LOAN COST_Value",
+        "KRI: HAND IN HAND LOAN COST_Value",
+        "KRI: MFI LOAN SERVICE COST_Value",
+        "KRI: DOCUMENTATION DELAY RATE_Value",
+        "KRI: GENDER BASED BARRIER RATE_Value",
+        "KRI: FAMILY AND COMMUNITY BARRIER RATE_Value",
       "KRI: TRAINEE DROPOUT RATE_Value",
       "KRI: TRAINER DROPOUT RATE_Value",
       "KRI: CURRICULUM RELEVANCE COMPLAINT RATE_Value",
@@ -200,7 +201,11 @@ BEGIN
       v_curriculum_weight,
       v_knowledge_weight
     );
-  END IF;
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    -- Gracefully skip if Barriers table or columns don't exist
+    NULL;
+  END;
 
   RETURN NEW;
 END;

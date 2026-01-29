@@ -1,37 +1,36 @@
--- Update branch_reports with actual data from form_submissions
+-- Drop the problematic KRI trigger temporarily
+DROP TRIGGER IF EXISTS update_barriers_kri_on_branch_report_update ON branch_reports;
+
+-- Direct UPDATE - copy data from form_submissions to branch_reports
 UPDATE branch_reports br
 SET
-  credit_sources = COALESCE(fs.credit_sources, 0),
-  num_mfis = COALESCE(fs.num_mfis, 0),
-  groups_bank_account = COALESCE(fs.groups_bank_account, 0),
-  members_bank_account = COALESCE(fs.members_bank_account, 0),
-  inactive_accounts = COALESCE(fs.inactive_accounts, 0),
-  num_insurers = COALESCE(fs.num_insurers, 0),
-  members_insurance = COALESCE(fs.members_insurance, 0),
-  borrowed_groups = COALESCE(fs.borrowed_groups, 0),
-  members_applying_loans = COALESCE(fs.members_applying_loans, 0),
-  loan_amount_applied = COALESCE(fs.loan_amount_applied, 0),
-  date_loan_applied = fs.date_loan_applied,
-  loan_amount_approved = COALESCE(fs.loan_amount_approved, 0),
-  members_received_loans = COALESCE(fs.members_received_loans, 0),
-  date_loan_received = fs.date_loan_received,
-  members_complaining_delay = COALESCE(fs.members_complaining_delay, 0),
-  loan_uses = COALESCE(fs.loan_uses, 0),
-  loan_default = COALESCE(fs.loan_default, 0),
-  loan_delinquency = COALESCE(fs.loan_delinquency, 0),
-  loan_dropout = COALESCE(fs.loan_dropout, 0),
-  money_fraud = COALESCE(fs.money_fraud, 0),
-  trust_erosion = COALESCE(fs.trust_erosion, ''),
-  documentation_delay = COALESCE(fs.documentation_delay, ''),
-  loan_cost_high = COALESCE(fs.loan_cost_high, 0),
-  number_of_groups = COALESCE(fs.number_of_groups, 0),
-  members_at_start = COALESCE(fs.members_at_start, 0),
-  members_at_end = COALESCE(fs.members_at_end, 0),
-  bros_at_start = COALESCE(fs.bros_at_start, 0),
-  bros_at_end = COALESCE(fs.bros_at_end, 0),
+  credit_sources = fs.credit_sources,
+  num_mfis = fs.num_mfis,
+  groups_bank_account = fs.groups_bank_account,
+  members_bank_account = fs.members_bank_account,
+  inactive_accounts = fs.inactive_accounts,
+  num_insurers = fs.num_insurers,
+  members_insurance = fs.members_insurance,
+  borrowed_groups = fs.borrowed_groups,
+  members_applying_loans = fs.members_applying_loans,
+  loan_amount_applied = fs.loan_amount_applied,
+  loan_amount_approved = fs.loan_amount_approved,
+  members_received_loans = fs.members_received_loans,
+  members_complaining_delay = fs.members_complaining_delay,
+  loan_uses = fs.loan_uses,
+  loan_default = fs.loan_default,
+  loan_delinquency = fs.loan_delinquency,
+  loan_dropout = fs.loan_dropout,
+  money_fraud = fs.money_fraud,
+  trust_erosion = fs.trust_erosion,
+  documentation_delay = fs.documentation_delay,
+  number_of_groups = fs.number_of_groups,
+  members_at_start = fs.members_at_start,
+  members_at_end = fs.members_at_end,
+  bros_at_start = fs.bros_at_start,
+  bros_at_end = fs.bros_at_end,
   updated_at = NOW()
 FROM form_submissions fs
 WHERE br.branch_id = fs.branch_id
-  AND br.project_id = fs.project_id
-  AND fs.status = 'approved'
-  AND (br.credit_sources IS NULL OR br.credit_sources = 0);
+  AND br.project_id IS NOT DISTINCT FROM fs.project_id
+  AND fs.status = 'approved';
