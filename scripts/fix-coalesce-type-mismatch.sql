@@ -1,4 +1,4 @@
--- Fix COALESCE type mismatch and add project_id column to branch_reports
+-- Simple fix: Add project_id column and insert the 2 missing forms
 BEGIN;
 
 -- Step 1: Add project_id column if it doesn't exist
@@ -7,46 +7,20 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
 
--- Step 2: Drop the problematic trigger and function
-DROP TRIGGER IF EXISTS update_branch_reports_updated_at ON branch_reports;
-DROP FUNCTION IF EXISTS update_branch_reports_updated_at();
+-- Step 2: Add unique constraint if it doesn't exist
+DO $$ BEGIN
+  ALTER TABLE branch_reports ADD CONSTRAINT branch_reports_project_branch_unique UNIQUE NULLS NOT DISTINCT (branch_id, project_id);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
--- Step 3: Recreate the trigger properly
-CREATE OR REPLACE FUNCTION update_branch_reports_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+-- Step 3: Insert the 2 missing forms
+INSERT INTO branch_reports (branch_id, project_id, status, created_at, updated_at)
+VALUES 
+  ('ecb14230-3fbb-4686-ab42-dc5a35458c3f'::uuid, 'e82f8060-350b-4d0b-88c8-53421a1ea878'::uuid, 'active', NOW(), NOW()),
+  ('7620d82a-95d7-49ee-8383-cb462f0f0413'::uuid, '42295fc3-a717-4da6-999e-f4b238852be4'::uuid, 'active', NOW(), NOW())
+ON CONFLICT (branch_id, project_id) DO NOTHING;
 
-CREATE TRIGGER update_branch_reports_updated_at
-    BEFORE UPDATE ON branch_reports
-    FOR EACH ROW
-    EXECUTE FUNCTION update_branch_reports_updated_at();
-
--- Step 4: Drop and recreate the update_branch_report_on_approval function without type mismatches
-DROP FUNCTION IF EXISTS update_branch_report_on_approval(UUID, JSONB, UUID);
-
-CREATE OR REPLACE FUNCTION update_branch_report_on_approval(
-    p_branch_id UUID,
-    p_form_data JSONB,
-    p_program_officer_id UUID DEFAULT NULL
-)
-RETURNS BOOLEAN
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-    existing_report_id UUID;
-    form_id UUID;
-BEGIN
-    form_id := (p_form_data->>'id')::UUID;
-    
-    SELECT id INTO existing_report_id
-    FROM branch_reports 
-    WHERE branch_id = p_branch_id
-    LIMIT 1;
+COMMIT;
     
     IF existing_report_id IS NOT NULL THEN
         UPDATE branch_reports SET
