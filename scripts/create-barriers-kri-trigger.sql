@@ -22,6 +22,11 @@ DECLARE
   v_curriculum_relevance_complaint_rate NUMERIC;
   v_low_knowledge_retention_rate NUMERIC;
   
+  -- KPI values
+  v_value_chain_diversification NUMERIC;
+  v_startup_level_rate NUMERIC;
+  v_acceleration_level_rate NUMERIC;
+  
   -- KRI weights (fetch from barriers_weights_config)
   v_fraud_weight NUMERIC;
   v_trust_weight NUMERIC;
@@ -96,6 +101,19 @@ BEGIN
     ELSE ROUND((1 - (COALESCE(NEW.members_applying_loans, 0)::numeric / NEW.members_at_end::numeric)) * 100, 2)
   END;
 
+  -- KPI CALCULATIONS
+  -- 1. VALUE CHAIN DIVERSIFICATION RATE_Value = loan_uses ÷ members_received_loans
+  v_value_chain_diversification := CASE
+    WHEN NEW.members_received_loans = 0 OR NEW.members_received_loans IS NULL THEN 0
+    ELSE ROUND((COALESCE(NEW.loan_uses, 0)::numeric / NEW.members_received_loans::numeric) * 100, 2)
+  END;
+
+  -- 2. STARTUP LEVEL RATE = 1 (fixed value)
+  v_startup_level_rate := 1.0;
+
+  -- 3. ACCELERATION LEVEL RATE = 1 (fixed value)
+  v_acceleration_level_rate := 1.0;
+
   -- Fetch KRI weights from barriers_weights_config table
   SELECT COALESCE(weight_value, 0.0833) INTO v_fraud_weight FROM barriers_weights_config WHERE metric_key = 'FRAUD_INCIDENT_RATE' LIMIT 1;
   SELECT COALESCE(weight_value, 0.0833) INTO v_trust_weight FROM barriers_weights_config WHERE metric_key = 'TRUST_EROSION_IN_MFIs' LIMIT 1;
@@ -127,6 +145,10 @@ BEGIN
       "KRI: TRAINER DROPOUT RATE_Value" = v_trainer_dropout_rate,
       "KRI: CURRICULUM RELEVANCE COMPLAINT RATE_Value" = v_curriculum_relevance_complaint_rate,
       "KRI: LOW KNOWLEDGE RETENTION RATE_Value" = v_low_knowledge_retention_rate,
+      -- KPI Values
+      "KPI: VALUE CHAIN DIVERSIFICATION RATE_Value" = v_value_chain_diversification,
+      "KPI: STARTUP LEVEL RATE_Value" = v_startup_level_rate,
+      "KPI: ACCELERATION LEVEL RATE_Value" = v_acceleration_level_rate,
       -- KRI Weights
       "KRI: FRAUD INCIDENT RATE_Weight" = v_fraud_weight,
       "KRI: TRUST EROSION IN MFIs_Weight" = v_trust_weight,
@@ -161,6 +183,9 @@ BEGIN
       "KRI: TRAINER DROPOUT RATE_Value",
       "KRI: CURRICULUM RELEVANCE COMPLAINT RATE_Value",
       "KRI: LOW KNOWLEDGE RETENTION RATE_Value",
+      "KPI: VALUE CHAIN DIVERSIFICATION RATE_Value",
+      "KPI: STARTUP LEVEL RATE_Value",
+      "KPI: ACCELERATION LEVEL RATE_Value",
       "KRI: FRAUD INCIDENT RATE_Weight",
       "KRI: TRUST EROSION IN MFIs_Weight",
       "KRI: MEMBERS LOAN COST_Weight",
@@ -188,6 +213,9 @@ BEGIN
       v_trainer_dropout_rate,
       v_curriculum_relevance_complaint_rate,
       v_low_knowledge_retention_rate,
+      v_value_chain_diversification,
+      v_startup_level_rate,
+      v_acceleration_level_rate,
       v_fraud_weight,
       v_trust_weight,
       v_members_cost_weight,
