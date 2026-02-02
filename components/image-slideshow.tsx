@@ -54,7 +54,7 @@ export default function ImageSlideshow() {
             src={image.src || "/placeholder.svg"}
             alt={image.alt}
             fill
-            className="object-cover"
+            className="object-contain"
             priority={index === 0}
             sizes="50vw"
           />
