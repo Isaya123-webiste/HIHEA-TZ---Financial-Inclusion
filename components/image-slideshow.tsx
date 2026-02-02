@@ -5,28 +5,28 @@ import Image from "next/image"
 
 const images = [
   {
-    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/IMG_7688.JPG-vf6ZE3fmtzOoSBreVKQlYQCJzxZwj6.jpeg",
-    alt: "Community members farming",
+    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/img4-ffwQmgUNhoJ356u7KbptPy3V84CJwB.png",
+    alt: "Seamless automations at a single glance",
+    title: "Seamless Automations",
+    description: "Automate your workflow seamlessly",
   },
   {
-    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/large-handinhand_tanzania_2023%20042-KWZAik0Z05JIO8DRF9nZIxkHozJVAH.jpg",
-    alt: "Maasai woman in traditional attire",
+    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/img2-wyw2prVwVSTrEpRHs8UNt6RD88GV0G.png",
+    alt: "Get data for your Branches, Instantly",
+    title: "Get Data Instantly",
+    description: "Access real-time branch data",
   },
   {
-    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/large-handinhand_tanzania_2023%20069-eklSgUjvf0hf3lJyH5MLblgnOi3lDG.jpg",
-    alt: "Woman farmer with tool",
+    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/img1-UEpJ7DnCtAEW6buJGp2uqyDOVap6Eo.png",
+    alt: "Know how your branches and projects are performing",
+    title: "Performance Insights",
+    description: "Monitor branch and project performance",
   },
   {
-    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/large-handinhand_tanzania_2023%20131-JaJ3KtnNhNhZL7wwUvaYG32k7CmsvY.jpg",
-    alt: "Woman in farm field",
-  },
-  {
-    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/large-handinhand_tanzania_2023%20168-bzDE5Y9Zvb8iJvEs0tWIKod3zhJ18H.jpg",
-    alt: "Woman with cow",
-  },
-  {
-    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/IMG_6736-3WjTbeDVHBp76wlgJ8qoxY55SrUAdw.jpg",
-    alt: "Young community member",
+    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/img3-VU7DB8IN8VyKLiLEoffxSKGkw2ef7i.png",
+    alt: "Export data to get a complete overview",
+    title: "Complete Overview",
+    description: "Export comprehensive data reports",
   },
 ]
 
@@ -42,7 +42,7 @@ export default function ImageSlideshow() {
   }, [])
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-teal-600">
+    <div className="relative h-full w-full overflow-hidden bg-blue-600">
       {images.map((image, index) => (
         <div
           key={index}
@@ -58,7 +58,6 @@ export default function ImageSlideshow() {
             priority={index === 0}
             sizes="50vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-teal-900/60 via-teal-900/20 to-transparent" />
         </div>
       ))}
 
@@ -74,16 +73,6 @@ export default function ImageSlideshow() {
             aria-label={`Go to slide ${index + 1}`}
           />
         ))}
-      </div>
-
-      {/* Overlay text */}
-      <div className="absolute inset-0 flex items-center justify-center z-20">
-        <div className="text-center px-8">
-          <h2 className="text-4xl font-bold text-white mb-4 drop-shadow-lg">Empowering Communities</h2>
-          <p className="text-xl text-white/90 max-w-2xl mx-auto drop-shadow-md">
-            Building stronger communities through accessible financial services and sustainable development
-          </p>
-        </div>
       </div>
     </div>
   )
