@@ -45,6 +45,9 @@ DECLARE
   v_sub_social_cultural_weight NUMERIC;
   v_sub_financial_literacy_weight NUMERIC;
   
+  -- BARRIERS_Value (overall calculation)
+  v_barriers_value NUMERIC;
+  
   -- KPI weights
   v_kpi_vcd_weight NUMERIC;
   v_kpi_startup_weight NUMERIC;
@@ -206,6 +209,18 @@ BEGIN
   SELECT COALESCE(weight_value, 0.20) INTO v_sub_social_cultural_weight FROM barriers_weights_config WHERE metric_key = 'SOCIAL_AND_CULTURAL_FACTORS' AND category = 'SUB_FACTOR' LIMIT 1;
   SELECT COALESCE(weight_value, 0.30) INTO v_sub_financial_literacy_weight FROM barriers_weights_config WHERE metric_key = 'FINANCIAL_LITERACY' AND category = 'SUB_FACTOR' LIMIT 1;
 
+  -- CALCULATE BARRIERS_VALUE (weighted sum of all SUB FACTORS)
+  v_barriers_value := ROUND(
+    (v_sub_income_level * v_sub_income_level_weight) +
+    (v_sub_distance * v_sub_distance_weight) +
+    (v_sub_trust * v_sub_trust_weight) +
+    (v_sub_costs * v_sub_costs_weight) +
+    (v_sub_registration * v_sub_registration_weight) +
+    (v_sub_social_cultural * v_sub_social_cultural_weight) +
+    (v_sub_financial_literacy * v_sub_financial_literacy_weight),
+    4
+  );
+
   -- Fetch KRI weights from barriers_weights_config table
   SELECT COALESCE(weight_value, 0.0833) INTO v_fraud_weight FROM barriers_weights_config WHERE metric_key = 'FRAUD_INCIDENT_RATE' LIMIT 1;
   SELECT COALESCE(weight_value, 0.0833) INTO v_trust_weight FROM barriers_weights_config WHERE metric_key = 'TRUST_EROSION_IN_MFIs' LIMIT 1;
@@ -261,6 +276,8 @@ BEGIN
       "SUB FACTOR: REGISTRATION_Weight" = v_sub_registration_weight,
       "SUB FACTOR: SOCIAL AND CULTURAL FACTORS_Weight" = v_sub_social_cultural_weight,
       "SUB FACTOR: FINANCIAL LITERACY_Weight" = v_sub_financial_literacy_weight,
+      -- BARRIERS_Value (Overall Barriers Score)
+      "BARRIERS_Value" = v_barriers_value,
       -- KRI Weights
       "KRI: FRAUD INCIDENT RATE_Weight" = v_fraud_weight,
       "KRI: TRUST EROSION IN MFIs_Weight" = v_trust_weight,
@@ -315,6 +332,7 @@ BEGIN
       "SUB FACTOR: REGISTRATION_Weight",
       "SUB FACTOR: SOCIAL AND CULTURAL FACTORS_Weight",
       "SUB FACTOR: FINANCIAL LITERACY_Weight",
+      "BARRIERS_Value",
       "KRI: FRAUD INCIDENT RATE_Weight",
       "KRI: TRUST EROSION IN MFIs_Weight",
       "KRI: MEMBERS LOAN COST_Weight",
@@ -362,6 +380,7 @@ BEGIN
       v_sub_registration_weight,
       v_sub_social_cultural_weight,
       v_sub_financial_literacy_weight,
+      v_barriers_value,
       v_fraud_weight,
       v_trust_weight,
       v_members_cost_weight,
