@@ -48,6 +48,7 @@ DECLARE
   -- BARRIERS_Value (overall calculation)
   v_barriers_value NUMERIC;
   v_barriers_weight NUMERIC;
+  v_barriers_actual_data NUMERIC;
   
   -- KPI weights
   v_kpi_vcd_weight NUMERIC;
@@ -225,6 +226,9 @@ BEGIN
   -- FETCH BARRIERS_Weight from barriers_weights_config
   SELECT COALESCE(weight_value, 0.20) INTO v_barriers_weight FROM barriers_weights_config WHERE metric_key = 'BARRIERS' AND category = 'MAIN_FACTOR' LIMIT 1;
 
+  -- CALCULATE BARRIERS_ACTUAL_DATA (BARRIERS_Value × BARRIERS_Weight)
+  v_barriers_actual_data := ROUND(v_barriers_value * v_barriers_weight, 4);
+
   -- Fetch KRI weights from barriers_weights_config table
   SELECT COALESCE(weight_value, 0.0833) INTO v_fraud_weight FROM barriers_weights_config WHERE metric_key = 'FRAUD_INCIDENT_RATE' LIMIT 1;
   SELECT COALESCE(weight_value, 0.0833) INTO v_trust_weight FROM barriers_weights_config WHERE metric_key = 'TRUST_EROSION_IN_MFIs' LIMIT 1;
@@ -283,6 +287,7 @@ BEGIN
       -- BARRIERS_Value (Overall Barriers Score)
       "BARRIERS_Value" = v_barriers_value,
       "BARRIERS_Weight" = v_barriers_weight,
+      "Barriers_Actual_Data" = v_barriers_actual_data,
       -- KRI Weights
       "KRI: FRAUD INCIDENT RATE_Weight" = v_fraud_weight,
       "KRI: TRUST EROSION IN MFIs_Weight" = v_trust_weight,
@@ -339,6 +344,7 @@ BEGIN
       "SUB FACTOR: FINANCIAL LITERACY_Weight",
       "BARRIERS_Value",
       "BARRIERS_Weight",
+      "Barriers_Actual_Data",
       "KRI: FRAUD INCIDENT RATE_Weight",
       "KRI: TRUST EROSION IN MFIs_Weight",
       "KRI: MEMBERS LOAN COST_Weight",
@@ -388,6 +394,7 @@ BEGIN
       v_sub_financial_literacy_weight,
       v_barriers_value,
       v_barriers_weight,
+      v_barriers_actual_data,
       v_fraud_weight,
       v_trust_weight,
       v_members_cost_weight,
