@@ -5,25 +5,25 @@ import Image from "next/image"
 
 const images = [
   {
-    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/img4-ffwQmgUNhoJ356u7KbptPy3V84CJwB.png",
+    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image4-mRsnjpVqqqO4KPW7YkndDFdvD4ERWX.png",
     alt: "Seamless automations at a single glance",
     title: "Seamless Automations",
     description: "Automate your workflow seamlessly",
   },
   {
-    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/img2-wyw2prVwVSTrEpRHs8UNt6RD88GV0G.png",
+    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image2-6EJtICfAA04xD8OyQ4OHECFCpqyCga.png",
     alt: "Get data for your Branches, Instantly",
     title: "Get Data Instantly",
     description: "Access real-time branch data",
   },
   {
-    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/img1-UEpJ7DnCtAEW6buJGp2uqyDOVap6Eo.png",
+    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image1-mIxE36HW1ADfcGqS0lqz9p7QRoY4TE.png",
     alt: "Know how your branches and projects are performing",
     title: "Performance Insights",
     description: "Monitor branch and project performance",
   },
   {
-    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/img3-VU7DB8IN8VyKLiLEoffxSKGkw2ef7i.png",
+    src: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image3-h3v4v9vhbf5IXp7jxUJcazYvZG8GwI.png",
     alt: "Export data to get a complete overview",
     title: "Complete Overview",
     description: "Export comprehensive data reports",
@@ -42,7 +42,7 @@ export default function ImageSlideshow() {
   }, [])
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700">
+    <div className="relative h-full w-full overflow-hidden" style={{ backgroundColor: '#0050ED' }}>
       {images.map((image, index) => (
         <div
           key={index}
