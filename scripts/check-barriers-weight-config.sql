@@ -1,1 +1,1 @@
-SELECT metric_key, weight_value, category FROM barriers_weights_config WHERE metric_key = 'BARRIERS' OR metric_key ILIKE '%BARRIERS%' ORDER BY metric_key;
+SELECT * FROM barriers_weights_config WHERE metric_key LIKE '%BARRIERS%' OR category = 'OVERALL';
