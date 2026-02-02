@@ -42,22 +42,24 @@ export default function ImageSlideshow() {
   }, [])
 
   return (
-    <div className="relative h-full w-full overflow-hidden bg-blue-600">
+    <div className="relative h-full w-full overflow-hidden bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700">
       {images.map((image, index) => (
         <div
           key={index}
-          className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+          className={`absolute inset-0 flex items-center justify-center transition-opacity duration-1000 ease-in-out ${
             index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"
           }`}
         >
-          <Image
-            src={image.src || "/placeholder.svg"}
-            alt={image.alt}
-            fill
-            className="object-contain"
-            priority={index === 0}
-            sizes="50vw"
-          />
+          <div className="relative w-full h-full flex items-center justify-center px-4 py-8">
+            <Image
+              src={image.src || "/placeholder.svg"}
+              alt={image.alt}
+              fill
+              className="object-contain p-4"
+              priority={index === 0}
+              sizes="50vw"
+            />
+          </div>
         </div>
       ))}
 
