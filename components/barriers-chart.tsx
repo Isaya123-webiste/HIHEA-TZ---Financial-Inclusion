@@ -11,19 +11,14 @@ interface BarriersData {
   projectName: string
   branchId: string
   branchName: string
-  fraudIncidentRate: number
-  trustErosion: number
-  membersLoanCost: number
-  handInHandLoanCost: number
-  mfiLoanServiceCost: number
-  documentationDelayRate: number
-  genderBasedBarrierRate: number
-  familyAndCommunityBarrierRate: number
-  traineeDropoutRate: number
-  trainerDropoutRate: number
-  curriculumRelevanceComplaintRate: number
-  lowKnowledgeRetentionRate: number
-  barriersActualData: number
+  incomeLevel: number
+  distance: number
+  trust: number
+  costs: number
+  registration: number
+  socialCultural: number
+  financialLiteracy: number
+  barriersValue: number
 }
 
 interface ChartDataPoint {
@@ -64,19 +59,14 @@ export default function BarriersChart({ selectedProjects, selectedBranches }: Ba
           projectName: projectMap.get(row["Project ID"]) || "Unknown Project",
           branchId: row["Branch ID"],
           branchName: branchMap.get(row["Branch ID"]) || "Unknown Branch",
-          fraudIncidentRate: (row["KRI: FRAUD INCIDENT RATE_Value"] || 0) * 100,
-          trustErosion: (row["KRI: TRUST EROSION IN MFIs_Value"] || 0) * 100,
-          membersLoanCost: (row["KRI: MEMBERS LOAN COST_Value"] || 0) * 100,
-          handInHandLoanCost: (row["KRI: HAND IN HAND LOAN COST_Value"] || 0) * 100,
-          mfiLoanServiceCost: (row["KRI: MFI LOAN SERVICE COST_Value"] || 0) * 100,
-          documentationDelayRate: (row["KRI: DOCUMENTATION DELAY RATE_Value"] || 0) * 100,
-          genderBasedBarrierRate: (row["KRI: GENDER BASED BARRIER RATE_Value"] || 0) * 100,
-          familyAndCommunityBarrierRate: (row["KRI: FAMILY AND COMMUNITY BARRIER RATE_Value"] || 0) * 100,
-          traineeDropoutRate: (row["KRI: TRAINEE DROPOUT RATE_Value"] || 0) * 100,
-          trainerDropoutRate: (row["KRI: TRAINER DROPOUT RATE_Value"] || 0) * 100,
-          curriculumRelevanceComplaintRate: (row["KRI: CURRICULUM RELEVANCE COMPLAINT RATE_Value"] || 0) * 100,
-          lowKnowledgeRetentionRate: (row["KRI: LOW KNOWLEDGE RETENTION RATE_Value"] || 0) * 100,
-          barriersActualData: (row["Barriers_Actual_Data"] || 0) * 100,
+          incomeLevel: (row["SUB FACTOR: INCOME LEVEL_Value"] || 0) * 100,
+          distance: (row["SUB FACTOR: DISTANCE_Value"] || 0) * 100,
+          trust: (row["SUB FACTOR: TRUST_Value"] || 0) * 100,
+          costs: (row["SUB FACTOR: COSTS_Value"] || 0) * 100,
+          registration: (row["SUB FACTOR: REGISTRATION_Value"] || 0) * 100,
+          socialCultural: (row["SUB FACTOR: SOCIAL AND CULTURAL FACTORS_Value"] || 0) * 100,
+          financialLiteracy: (row["SUB FACTOR: FINANCIAL LITERACY_Value"] || 0) * 100,
+          barriersValue: (row["BARRIERS_Value"] || 0) * 100,
         }))
 
         setBarriersData(enrichedData)
@@ -106,9 +96,18 @@ export default function BarriersChart({ selectedProjects, selectedBranches }: Ba
 
     if (filtered.length === 0) return []
 
-    const categories = ["FRAUD", "TRUST", "COSTS", "DOCUMENTATION", "GENDER", "FAMILY", "TRAINEE", "TRAINER"]
-    return categories.map((category) => {
-      const dataPoint: ChartDataPoint = { category }
+    const categories = [
+      { label: "INCOME LEVEL", key: "incomeLevel" },
+      { label: "DISTANCE", key: "distance" },
+      { label: "TRUST", key: "trust" },
+      { label: "COSTS", key: "costs" },
+      { label: "REGISTRATION", key: "registration" },
+      { label: "SOCIAL & CULTURAL", key: "socialCultural" },
+      { label: "FINANCIAL LITERACY", key: "financialLiteracy" },
+    ]
+    
+    return categories.map((cat) => {
+      const dataPoint: ChartDataPoint = { category: cat.label }
 
       const uniqueProjects = [...new Set(filtered.map((d) => d.projectId))]
       uniqueProjects.forEach((projectId) => {
@@ -116,26 +115,7 @@ export default function BarriersChart({ selectedProjects, selectedBranches }: Ba
         const projectName = projectData[0].projectName
 
         const values = projectData.map((d) => {
-          switch (category) {
-            case "FRAUD":
-              return d.fraudIncidentRate
-            case "TRUST":
-              return d.trustErosion
-            case "COSTS":
-              return d.mfiLoanServiceCost
-            case "DOCUMENTATION":
-              return d.documentationDelayRate
-            case "GENDER":
-              return d.genderBasedBarrierRate
-            case "FAMILY":
-              return d.familyAndCommunityBarrierRate
-            case "TRAINEE":
-              return d.traineeDropoutRate
-            case "TRAINER":
-              return d.trainerDropoutRate
-            default:
-              return 0
-          }
+          return d[cat.key as keyof BarriersData] as number
         })
         const avgValue = values.reduce((a, b) => a + b, 0) / values.length
         dataPoint[`${projectName}-${projectId}`] = Math.min(avgValue, 100)
@@ -145,7 +125,7 @@ export default function BarriersChart({ selectedProjects, selectedBranches }: Ba
     })
   }, [barriersData, selectedBranches, selectedProjects])
 
-  const avgBarriersActualData = useMemo(() => {
+  const avgBarriersValue = useMemo(() => {
     const ALL_BRANCHES_ID = "all-branches"
     const ALL_PROJECTS_ID = "all-projects"
 
@@ -159,7 +139,7 @@ export default function BarriersChart({ selectedProjects, selectedBranches }: Ba
     })
 
     if (filtered.length === 0) return 0
-    const sum = filtered.reduce((acc, item) => acc + item.barriersActualData, 0)
+    const sum = filtered.reduce((acc, item) => acc + item.barriersValue, 0)
     return (sum / filtered.length).toFixed(2)
   }, [barriersData, selectedBranches, selectedProjects])
 
