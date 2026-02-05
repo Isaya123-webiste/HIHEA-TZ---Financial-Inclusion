@@ -9,6 +9,7 @@ import { debugAdminUser, fixAdminRole } from "@/lib/debug-admin"
 import UsageChart from "@/components/usage-chart"
 import FactorsFilterBar from "@/components/factors-filter-bar"
 import AccessTable from "@/components/access-table"
+import BarriersChart from "@/components/barriers-chart"
 import PageHeader from "@/components/page-header"
 import DarkModeToggle from "@/components/dark-mode-toggle" // Import DarkModeToggle
 
@@ -380,6 +381,7 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 gap-8">
           <UsageChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
           <AccessTable selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
+          <BarriersChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
         </div>
       </main>
     </div>
