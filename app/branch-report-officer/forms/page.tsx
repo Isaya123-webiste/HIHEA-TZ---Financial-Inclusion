@@ -237,6 +237,11 @@ export default function BranchReportOfficerForms() {
       type: "number",
       required: true,
       placeholder: "0",
+      description: "Maximum 2 members",
+      properties: {
+        max: 2,
+        min: 0,
+      },
     },
     {
       id: "loan_delinquency",
@@ -283,9 +288,10 @@ export default function BranchReportOfficerForms() {
       id: "loan_cost_high",
       name: "loan_cost_high",
       label: "Loan cost-high? Ask members.",
-      type: "number", // Changed from "textarea" to "number"
+      type: "select",
       required: false,
-      placeholder: "0", // Changed placeholder to reflect numeric input
+      options: ["High", "Low"],
+      placeholder: "Select High or Low",
     },
     {
       id: "explain_barriers",
@@ -736,15 +742,29 @@ export default function BranchReportOfficerForms() {
       case "number":
       case "currency":
         return (
-          <Input
-            type="number"
-            value={value}
-            onChange={(e) => handleFieldChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={field.placeholder}
-            min="0"
-            className="w-full"
-          />
+          <div>
+            <Input
+              type="number"
+              value={value}
+              onChange={(e) => {
+                const numValue = parseInt(e.target.value) || 0
+                const maxValue = field.properties?.max
+                if (maxValue !== undefined && numValue > maxValue) {
+                  handleFieldChange(String(maxValue))
+                } else {
+                  handleFieldChange(e.target.value)
+                }
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder={field.placeholder}
+              min={String(field.properties?.min || 0)}
+              max={field.properties?.max ? String(field.properties.max) : undefined}
+              className="w-full"
+            />
+            {field.properties?.max && (
+              <p className="text-sm text-gray-500 mt-2">{field.description}</p>
+            )}
+          </div>
         )
       case "date":
         return (
