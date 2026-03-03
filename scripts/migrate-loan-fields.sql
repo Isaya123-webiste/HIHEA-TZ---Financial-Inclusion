@@ -1,34 +1,41 @@
 -- Migration script to update existing form data
--- This will ensure all loan_cost_high values are properly formatted
+-- Convert loan_cost_high from numeric to text (High/Low only)
+-- Cap loan_uses at maximum of 2
 
--- Update form_submissions table to ensure loan_cost_high is properly handled
--- For existing numeric values, we'll convert them to NULL since the field should now only contain "High" or "Low"
-BEGIN;
+-- First, check the current data
+SELECT COUNT(*) as total_records FROM form_submissions WHERE form_type = 'Create Financial Inclusion Report';
 
--- Check current data in form_submissions
-SELECT 
-  id, 
-  form_data->>'loan_cost_high' as loan_cost_high_value,
-  form_data->>'loan_uses' as loan_uses_value
-FROM form_submissions 
-LIMIT 10;
-
--- Update any numeric loan_cost_high values to NULL
--- and ensure loan_uses doesn't exceed 2
+-- Update form_submissions to cap loan_uses at 2 (in form_data JSONB)
 UPDATE form_submissions 
 SET form_data = jsonb_set(
-  form_data, 
-  '{loan_cost_high}', 
+  form_data,
+  '{loan_uses}',
+  '2'::jsonb
+)
+WHERE form_type = 'Create Financial Inclusion Report'
+  AND (form_data->>'loan_uses')::integer > 2;
+
+-- Clear numeric loan_cost_high column (convert to null) since field is now a dropdown
+UPDATE form_submissions 
+SET loan_cost_high = NULL
+WHERE form_type = 'Create Financial Inclusion Report'
+  AND loan_cost_high IS NOT NULL;
+
+-- Update loan_cost_high in form_data JSONB to null if it's numeric
+UPDATE form_submissions 
+SET form_data = jsonb_set(
+  form_data,
+  '{loan_cost_high}',
   'null'::jsonb
 )
-WHERE form_data->>'loan_cost_high' ~ '^\d+$';
+WHERE form_type = 'Create Financial Inclusion Report'
+  AND form_data->>'loan_cost_high' ~ '^\d+$';
 
--- Log the migration
-INSERT INTO audit_log (action, details, created_at)
-VALUES (
-  'migrate_loan_fields',
-  'Migrated loan_cost_high to dropdown (High/Low only) and validated loan_uses max = 2',
-  NOW()
-);
+-- Verify the updates
+SELECT COUNT(*) as capped_loan_uses FROM form_submissions 
+WHERE form_type = 'Create Financial Inclusion Report'
+  AND (form_data->>'loan_uses')::integer = 2;
 
-COMMIT;
+SELECT COUNT(*) as cleared_loan_cost FROM form_submissions 
+WHERE form_type = 'Create Financial Inclusion Report'
+  AND loan_cost_high IS NULL;
