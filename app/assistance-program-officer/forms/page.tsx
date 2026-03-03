@@ -488,26 +488,39 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
           <div className="space-y-4">
             <div>
               <Label htmlFor="loan_uses">Loan uses (write only members with 3 value chain activities) *</Label>
-              <Input
-                id="loan_uses"
-                type="number"
-                value={formData.loan_uses || ""}
-                onChange={(e) => setFormData({ ...formData, loan_uses: Number.parseInt(e.target.value) || 0 })}
-                placeholder="0"
-              />
+              <div>
+                <Input
+                  id="loan_uses"
+                  type="number"
+                  value={formData.loan_uses || ""}
+                  onChange={(e) => {
+                    const numValue = parseInt(e.target.value) || 0
+                    if (numValue > 2) {
+                      setFormData({ ...formData, loan_uses: 2 })
+                    } else {
+                      setFormData({ ...formData, loan_uses: numValue })
+                    }
+                  }}
+                  placeholder="0"
+                  min="0"
+                  max="2"
+                  className="w-full"
+                />
+                <p className="text-sm text-gray-500 mt-2">Maximum 2 members</p>
+              </div>
             </div>
 
             <div>
               <Label htmlFor="loan_cost_high">Loan cost-high? Ask members.</Label>
-              <Input
-                type="number"
-                id="loan_cost_high"
-                value={formData.loan_cost_high || ""}
-                onChange={(e) => setFormData({ ...formData, loan_cost_high: e.target.value })}
-                placeholder="0"
-                min="0"
-                className="w-full"
-              />
+              <Select value={formData.loan_cost_high || ""} onValueChange={(value) => setFormData({ ...formData, loan_cost_high: value })}>
+                <SelectTrigger id="loan_cost_high" className="w-full">
+                  <SelectValue placeholder="Select High or Low" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="High">High</SelectItem>
+                  <SelectItem value="Low">Low</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
