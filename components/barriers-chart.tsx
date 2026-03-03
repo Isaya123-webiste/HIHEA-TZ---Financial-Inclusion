@@ -165,8 +165,8 @@ export default function BarriersChart({ selectedProjects, selectedBranches }: Ba
         <CardHeader className="bg-white dark:bg-slate-900 pb-4 border-b border-slate-200 dark:border-slate-700">
           <div className="flex justify-between items-start">
             <div>
-              <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">{avgBarriersActualData}%</CardTitle>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Barriers</p>
+              <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">{avgBarriersValue}%</CardTitle>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Average Sub Factor Score</p>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-rose-500"></div>
@@ -202,12 +202,12 @@ export default function BarriersChart({ selectedProjects, selectedBranches }: Ba
       <CardHeader className="bg-white dark:bg-slate-900 pb-4 border-b border-slate-200 dark:border-slate-700">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">{avgBarriersActualData}%</CardTitle>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Barriers</p>
+            <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">{avgBarriersValue}%</CardTitle>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Average Sub Factor Score</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-rose-500"></div>
-            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Barriers</span>
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Barriers Sub Factors</span>
           </div>
         </div>
       </CardHeader>

@@ -50,6 +50,7 @@ html {
 }
         `}</style>
         <script
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               try {
