@@ -255,7 +255,6 @@ export default function BranchReportOfficerForms() {
         min: 0,
       },
     },
-    },
     {
       id: "loan_delinquency",
       name: "loan_delinquency",
