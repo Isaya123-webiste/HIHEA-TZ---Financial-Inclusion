@@ -148,13 +148,28 @@ export async function deleteBranch(
   try {
     console.log("[v0] Deleting branch:", branchId)
 
-    const { error } = await supabaseAdmin.from("branches").delete().eq("id", branchId)
+    // First, delete all profiles associated with this branch
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .delete()
+      .eq("branch_id", branchId)
 
-    if (error) {
-      console.error("[v0] Delete branch error:", error)
+    if (profileError) {
+      console.error("[v0] Delete profiles error:", profileError)
       return {
         success: false,
-        error: error.message || "Failed to delete branch",
+        error: profileError.message || "Failed to delete branch profiles",
+      }
+    }
+
+    // Then delete the branch itself
+    const { error: branchError } = await supabaseAdmin.from("branches").delete().eq("id", branchId)
+
+    if (branchError) {
+      console.error("[v0] Delete branch error:", branchError)
+      return {
+        success: false,
+        error: branchError.message || "Failed to delete branch",
       }
     }
 

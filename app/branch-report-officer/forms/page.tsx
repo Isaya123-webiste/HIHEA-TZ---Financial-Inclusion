@@ -237,11 +237,25 @@ export default function BranchReportOfficerForms() {
       type: "number",
       required: true,
       placeholder: "0",
-      description: "Maximum 2 members",
+      description: "Enter 0 or 1",
       properties: {
-        max: 2,
+        max: 1,
         min: 0,
       },
+    },
+    {
+      id: "loan_cost_high",
+      name: "loan_cost_high",
+      label: "Loan cost-high? Ask members.",
+      type: "number",
+      required: false,
+      placeholder: "0",
+      description: "Enter 0 or 1",
+      properties: {
+        max: 1,
+        min: 0,
+      },
+    },
     },
     {
       id: "loan_delinquency",
@@ -747,21 +761,28 @@ export default function BranchReportOfficerForms() {
               type="number"
               value={value}
               onChange={(e) => {
-                const numValue = parseInt(e.target.value) || 0
+                const numValue = parseInt(e.target.value)
                 const maxValue = field.properties?.max
-                if (maxValue !== undefined && numValue > maxValue) {
-                  handleFieldChange(String(maxValue))
+                const minValue = field.properties?.min ?? 0
+                if (!isNaN(numValue)) {
+                  if (maxValue !== undefined && numValue > maxValue) {
+                    handleFieldChange(String(maxValue))
+                  } else if (numValue < minValue) {
+                    handleFieldChange(String(minValue))
+                  } else {
+                    handleFieldChange(String(numValue))
+                  }
                 } else {
-                  handleFieldChange(e.target.value)
+                  handleFieldChange("")
                 }
               }}
               onKeyDown={handleKeyDown}
               placeholder={field.placeholder}
-              min={String(field.properties?.min || 0)}
-              max={field.properties?.max ? String(field.properties.max) : undefined}
+              min={String(field.properties?.min ?? 0)}
+              max={field.properties?.max !== undefined ? String(field.properties.max) : undefined}
               className="w-full"
             />
-            {field.properties?.max && (
+            {field.description && (
               <p className="text-sm text-gray-500 mt-2">{field.description}</p>
             )}
           </div>

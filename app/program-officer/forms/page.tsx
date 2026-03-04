@@ -497,35 +497,54 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
                 <Input
                   id="loan_uses"
                   type="number"
-                  value={formData.loan_uses || ""}
+                  value={formData.loan_uses !== undefined ? formData.loan_uses : ""}
                   onChange={(e) => {
-                    const numValue = parseInt(e.target.value) || 0
-                    if (numValue > 2) {
-                      setFormData({ ...formData, loan_uses: 2 })
-                    } else {
-                      setFormData({ ...formData, loan_uses: numValue })
+                    const numValue = parseInt(e.target.value)
+                    if (!isNaN(numValue)) {
+                      if (numValue > 1) {
+                        setFormData({ ...formData, loan_uses: 1 })
+                      } else if (numValue < 0) {
+                        setFormData({ ...formData, loan_uses: 0 })
+                      } else {
+                        setFormData({ ...formData, loan_uses: numValue })
+                      }
                     }
                   }}
                   placeholder="0"
                   min="0"
-                  max="2"
+                  max="1"
                   className="w-full"
                 />
-                <p className="text-sm text-gray-500 mt-2">Maximum 2 members</p>
+                <p className="text-sm text-gray-500 mt-2">Enter 0 or 1</p>
               </div>
             </div>
 
             <div>
               <Label htmlFor="loan_cost_high">Loan cost-high? Ask members.</Label>
-              <Select value={formData.loan_cost_high || ""} onValueChange={(value) => setFormData({ ...formData, loan_cost_high: value })}>
-                <SelectTrigger id="loan_cost_high" className="w-full">
-                  <SelectValue placeholder="Select High or Low" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="High">High</SelectItem>
-                  <SelectItem value="Low">Low</SelectItem>
-                </SelectContent>
-              </Select>
+              <div>
+                <Input
+                  id="loan_cost_high"
+                  type="number"
+                  value={formData.loan_cost_high !== undefined ? formData.loan_cost_high : ""}
+                  onChange={(e) => {
+                    const numValue = parseInt(e.target.value)
+                    if (!isNaN(numValue)) {
+                      if (numValue > 1) {
+                        setFormData({ ...formData, loan_cost_high: 1 })
+                      } else if (numValue < 0) {
+                        setFormData({ ...formData, loan_cost_high: 0 })
+                      } else {
+                        setFormData({ ...formData, loan_cost_high: numValue })
+                      }
+                    }
+                  }}
+                  placeholder="0"
+                  min="0"
+                  max="1"
+                  className="w-full"
+                />
+                <p className="text-sm text-gray-500 mt-2">Enter 0 or 1</p>
+              </div>
             </div>
 
             <div>
