@@ -516,30 +516,22 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
 
             <div>
               <Label htmlFor="loan_cost_high">Loan cost-high? Ask members.</Label>
-              <div>
-                <Input
-                  id="loan_cost_high"
-                  type="number"
-                  value={formData.loan_cost_high !== undefined ? formData.loan_cost_high : ""}
-                  onChange={(e) => {
-                    const numValue = parseInt(e.target.value)
-                    if (!isNaN(numValue)) {
-                      if (numValue > 1) {
-                        setFormData({ ...formData, loan_cost_high: 1 })
-                      } else if (numValue < 0) {
-                        setFormData({ ...formData, loan_cost_high: 0 })
-                      } else {
-                        setFormData({ ...formData, loan_cost_high: numValue })
-                      }
-                    }
-                  }}
-                  placeholder="0"
-                  min="0"
-                  max="1"
-                  className="w-full"
-                />
-                <p className="text-sm text-gray-500 mt-2">Enter 0 or 1</p>
-              </div>
+              <Input
+                id="loan_cost_high"
+                type="number"
+                value={formData.loan_cost_high !== undefined ? formData.loan_cost_high : ""}
+                onChange={(e) => {
+                  const numValue = parseInt(e.target.value)
+                  if (!isNaN(numValue) && numValue >= 0) {
+                    setFormData({ ...formData, loan_cost_high: numValue })
+                  } else if (e.target.value === "") {
+                    setFormData({ ...formData, loan_cost_high: undefined })
+                  }
+                }}
+                placeholder="0"
+                min="0"
+                className="w-full"
+              />
             </div>
 
             <div>

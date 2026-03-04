@@ -250,9 +250,8 @@ export default function BranchReportOfficerForms() {
       type: "number",
       required: false,
       placeholder: "0",
-      description: "Enter 0 or 1",
+      description: "Enter numeric cost value",
       properties: {
-        max: 1,
         min: 0,
       },
     },

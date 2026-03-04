@@ -1,44 +1,52 @@
--- Migration to update loan fields to numeric 0-1 format
--- loan_cost_high and loan_uses should only accept 0 or 1
+-- Migration to update loan fields correctly
+-- loan_uses: numeric (0 or 1 only) - binary yes/no field
+-- loan_cost_high: numeric (any positive number) - actual cost value field
 
--- Update form_submissions table to ensure numeric values and cap at 1
-UPDATE form_submissions
+-- Check current data
+SELECT COUNT(*) as total_records FROM form_submissions WHERE form_type = 'Create Financial Inclusion Report';
+
+-- Update form_submissions to ensure loan_uses is 0 or 1 only
+UPDATE form_submissions 
 SET form_data = jsonb_set(
   form_data,
   '{loan_uses}',
-  CASE 
-    WHEN (form_data->>'loan_uses')::int > 1 THEN '1'::jsonb
-    WHEN (form_data->>'loan_uses')::int < 0 THEN '0'::jsonb
-    ELSE form_data->'loan_uses'
-  END
+  '0'::jsonb
 )
-WHERE form_data->>'loan_uses' IS NOT NULL
-  AND (form_data->>'loan_uses')::int != 0 AND (form_data->>'loan_uses')::int != 1;
+WHERE form_type = 'Create Financial Inclusion Report'
+  AND form_data->>'loan_uses' IS NOT NULL
+  AND (form_data->>'loan_uses')::integer NOT IN (0, 1);
 
--- Convert loan_cost_high from string ("High"/"Low") to numeric (0/1)
--- High = 1, Low = 0
-UPDATE form_submissions
+-- Convert any non-numeric loan_cost_high values (like "High"/"Low" strings) to NULL
+UPDATE form_submissions 
 SET form_data = jsonb_set(
   form_data,
   '{loan_cost_high}',
-  CASE 
-    WHEN form_data->>'loan_cost_high' = 'High' THEN '1'::jsonb
-    WHEN form_data->>'loan_cost_high' = 'Low' THEN '0'::jsonb
-    WHEN (form_data->>'loan_cost_high')::int > 1 THEN '1'::jsonb
-    WHEN (form_data->>'loan_cost_high')::int < 0 THEN '0'::jsonb
-    ELSE form_data->'loan_cost_high'
-  END
+  'null'::jsonb
 )
-WHERE form_data->>'loan_cost_high' IS NOT NULL;
+WHERE form_type = 'Create Financial Inclusion Report'
+  AND form_data->>'loan_cost_high' IS NOT NULL
+  AND NOT (form_data->>'loan_cost_high' ~ '^\d+(\.\d+)?$');
+
+-- Ensure loan_cost_high is non-negative (cap negative values at 0)
+UPDATE form_submissions 
+SET form_data = jsonb_set(
+  form_data,
+  '{loan_cost_high}',
+  '0'::jsonb
+)
+WHERE form_type = 'Create Financial Inclusion Report'
+  AND form_data->>'loan_cost_high' IS NOT NULL
+  AND (form_data->>'loan_cost_high')::numeric < 0;
 
 -- Verify the migrations
-SELECT COUNT(*) as total_records FROM form_submissions;
+SELECT COUNT(*) as total_records FROM form_submissions WHERE form_type = 'Create Financial Inclusion Report';
 
-SELECT COUNT(*) as loan_uses_fixed
+SELECT COUNT(*) as loan_uses_valid
 FROM form_submissions
-WHERE form_data->>'loan_uses' IN ('0', '1');
+WHERE form_type = 'Create Financial Inclusion Report'
+  AND (form_data->>'loan_uses')::integer IN (0, 1);
 
-SELECT COUNT(*) as loan_cost_high_fixed
+SELECT COUNT(*) as loan_cost_high_valid
 FROM form_submissions
-WHERE form_data->>'loan_cost_high' IN ('0', '1') 
-   OR form_data->>'loan_cost_high' IS NULL;
+WHERE form_type = 'Create Financial Inclusion Report'
+  AND (form_data->>'loan_cost_high' IS NULL OR form_data->>'loan_cost_high' ~ '^\d+(\.\d+)?$');
