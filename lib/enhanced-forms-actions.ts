@@ -676,7 +676,7 @@ export async function approveForm(formId: string, programOfficerId: string) {
         borrowed_groups, members_applying_loans, loan_amount_applied, date_loan_applied,
         loan_amount_approved, members_received_loans, date_loan_received,
         members_complaining_delay, loan_uses, loan_default, loan_delinquency,
-        loan_dropout, money_fraud, trust_erosion, documentation_delay, loan_cost_barriers,
+        loan_dropout, money_fraud, trust_erosion, documentation_delay, loan_cost_high,
         number_of_groups, members_at_start, members_at_end, bros_at_start, bros_at_end`
       )
       .eq("id", formId)
@@ -748,7 +748,7 @@ export async function approveForm(formId: string, programOfficerId: string) {
         money_fraud: formData.money_fraud || 0,
         trust_erosion: formData.trust_erosion || "",
         documentation_delay: formData.documentation_delay || "",
-        loan_cost_high: formData.loan_cost_barriers || 0,
+        loan_cost_high: formData.loan_cost_high || 0,
         explain_barriers: formData.explain_barriers || "",
         number_of_groups: formData.number_of_groups || 0,
         members_at_start: formData.members_at_start || 0,
