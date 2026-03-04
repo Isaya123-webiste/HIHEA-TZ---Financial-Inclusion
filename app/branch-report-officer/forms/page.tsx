@@ -237,7 +237,6 @@ export default function BranchReportOfficerForms() {
       type: "number",
       required: true,
       placeholder: "0",
-      description: "Enter 0 or 1",
       properties: {
         max: 1,
         min: 0,
@@ -250,7 +249,6 @@ export default function BranchReportOfficerForms() {
       type: "number",
       required: false,
       placeholder: "0",
-      description: "Enter numeric cost value",
       properties: {
         min: 0,
       },
@@ -295,15 +293,6 @@ export default function BranchReportOfficerForms() {
       type: "number",
       required: false,
       placeholder: "0",
-    },
-    {
-      id: "loan_cost_high",
-      name: "loan_cost_high",
-      label: "Loan cost-high? Ask members.",
-      type: "select",
-      required: false,
-      options: ["High", "Low"],
-      placeholder: "Select High or Low",
     },
     {
       id: "explain_barriers",
