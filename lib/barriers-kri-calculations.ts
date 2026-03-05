@@ -157,6 +157,140 @@ export async function calculateLowKnowledgeRetentionRate(branchData: BranchRepor
 }
 
 /**
+ * Calculate Sub Factor: Income Level
+ * Based on members with bank accounts vs total members
+ */
+export async function calculateSubFactorIncomeLevel(branchData: BranchReportData): Promise<number> {
+  const numerator = branchData.members_bank_account || 0
+  const denominator = branchData.members_at_end || 0
+  return safeDivide(numerator, denominator)
+}
+
+/**
+ * Calculate Sub Factor: Distance
+ * Based on number of agent locations available
+ */
+export async function calculateSubFactorDistance(branchData: BranchReportData): Promise<number> {
+  // This would typically be calculated from geographic data
+  // For now, assuming higher number of agents means better accessibility (lower distance barrier)
+  const agentCount = branchData.agents || 0
+  return Math.min(agentCount / 100, 1) // Normalize to 0-1 range
+}
+
+/**
+ * Calculate Sub Factor: Trust
+ * Inverse of trust erosion rate (lower erosion = higher trust)
+ */
+export async function calculateSubFactorTrust(branchData: BranchReportData): Promise<number> {
+  const trustErosionRate = await calculateTrustErosion(branchData)
+  return Math.max(0, 1 - trustErosionRate) // Return 1 - erosion rate
+}
+
+/**
+ * Calculate Sub Factor: Costs
+ * Based on loan cost burden relative to loan amount
+ */
+export async function calculateSubFactorCosts(branchData: BranchReportData): Promise<number> {
+  const membersLoanCost = await calculateMembersLoanCost(branchData)
+  // Lower cost = higher sub-factor (less barrier)
+  return Math.max(0, 1 - membersLoanCost / 100)
+}
+
+/**
+ * Calculate Sub Factor: Registration
+ * Based on documentation efficiency (inverse of documentation delay)
+ */
+export async function calculateSubFactorRegistration(branchData: BranchReportData): Promise<number> {
+  const documentationDelayRate = await calculateDocumentationDelayRate(branchData)
+  return Math.max(0, 1 - documentationDelayRate)
+}
+
+/**
+ * Calculate Sub Factor: Social and Cultural Factors
+ * Based on family and community barriers
+ */
+export async function calculateSubFactorSocialCultural(branchData: BranchReportData): Promise<number> {
+  const communityBarrierRate = await calculateFamilyAndCommunityBarrierRate()
+  return Math.max(0, 1 - communityBarrierRate)
+}
+
+/**
+ * Calculate Sub Factor: Financial Literacy
+ * Inverse of low knowledge retention rate
+ */
+export async function calculateSubFactorFinancialLiteracy(branchData: BranchReportData): Promise<number> {
+  const lowRetentionRate = await calculateLowKnowledgeRetentionRate(branchData)
+  return Math.max(0, 1 - lowRetentionRate)
+}
+
+/**
+ * Calculate KPI: Value Chain Diversification Rate
+ * Based on number of different credit sources
+ */
+export async function calculateKPIValueChainDiversification(branchData: BranchReportData): Promise<number> {
+  const creditSources = branchData.credit_sources || 0
+  return Math.min(creditSources / 10, 1) // Normalize to 0-1
+}
+
+/**
+ * Calculate KPI: Startup Level Rate
+ * Based on new members being enrolled
+ */
+export async function calculateKPIStartupLevelRate(branchData: BranchReportData): Promise<number> {
+  const newMembers = (branchData.members_at_end || 0) - (branchData.members_at_start || 0)
+  const denominator = branchData.members_at_start || 1
+  return safeDivide(newMembers, denominator)
+}
+
+/**
+ * Calculate KPI: Acceleration Level Rate
+ * Based on loan approval rate
+ */
+export async function calculateKPIAccelerationLevelRate(branchData: BranchReportData): Promise<number> {
+  const membersApplying = branchData.members_applying_loans || 0
+  const membersApproved = branchData.members_received_loans || 0
+  return safeDivide(membersApproved, membersApplying)
+}
+
+/**
+ * Calculate main Barriers Value (composite score)
+ * Weighted average of all sub-factors
+ */
+export async function calculateBarriersMainValue(branchData: BranchReportData): Promise<number> {
+  const subFactors = {
+    incomeLevel: await calculateSubFactorIncomeLevel(branchData),
+    distance: await calculateSubFactorDistance(branchData),
+    trust: await calculateSubFactorTrust(branchData),
+    costs: await calculateSubFactorCosts(branchData),
+    registration: await calculateSubFactorRegistration(branchData),
+    socialCultural: await calculateSubFactorSocialCultural(branchData),
+    financialLiteracy: await calculateSubFactorFinancialLiteracy(branchData),
+  }
+
+  // Weighted average
+  const weights = {
+    incomeLevel: 0.15,
+    distance: 0.12,
+    trust: 0.18,
+    costs: 0.20,
+    registration: 0.10,
+    socialCultural: 0.15,
+    financialLiteracy: 0.10,
+  }
+
+  const totalScore =
+    subFactors.incomeLevel * weights.incomeLevel +
+    subFactors.distance * weights.distance +
+    subFactors.trust * weights.trust +
+    subFactors.costs * weights.costs +
+    subFactors.registration * weights.registration +
+    subFactors.socialCultural * weights.socialCultural +
+    subFactors.financialLiteracy * weights.financialLiteracy
+
+  return Math.round(totalScore * 100) / 100
+}
+
+/**
  * Calculate all Barriers KRI values at once
  * Takes branch_report data and returns all 12 KRI values
  */
