@@ -18,6 +18,10 @@ const config: Config = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["var(--font-plus-jakarta-sans)"],
+        mono: ["var(--font-mono)"],
+      },
       colors: {
         teal: {
           50: "#f0fdfa",

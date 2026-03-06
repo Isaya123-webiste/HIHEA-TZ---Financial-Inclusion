@@ -84,7 +84,7 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
         members_received_loans: form.members_received_loans || 0,
         date_loan_received: form.date_loan_received || "",
         members_complaining_delay: form.members_complaining_delay || 0,
-        loan_uses: form.loan_uses || "",
+        loan_uses: form.loan_uses || 0,
         loan_default: form.loan_default || 0,
         loan_delinquency: form.loan_delinquency || 0,
         loan_dropout: form.loan_dropout || 0,
@@ -488,22 +488,46 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
           <div className="space-y-4">
             <div>
               <Label htmlFor="loan_uses">Loan uses (write only members with 3 value chain activities) *</Label>
-              <Textarea
-                id="loan_uses"
-                value={formData.loan_uses || ""}
-                onChange={(e) => setFormData({ ...formData, loan_uses: e.target.value })}
-                placeholder="Describe loan uses for members with 3 value chain activities"
-                rows={4}
-              />
+              <div>
+                <Input
+                  id="loan_uses"
+                  type="number"
+                  value={formData.loan_uses !== undefined ? formData.loan_uses : ""}
+                  onChange={(e) => {
+                    const numValue = parseInt(e.target.value)
+                    if (!isNaN(numValue)) {
+                      if (numValue > 1) {
+                        setFormData({ ...formData, loan_uses: 1 })
+                      } else if (numValue < 0) {
+                        setFormData({ ...formData, loan_uses: 0 })
+                      } else {
+                        setFormData({ ...formData, loan_uses: numValue })
+                      }
+                    }
+                  }}
+                  placeholder="0"
+                  min="0"
+                  max="1"
+                  className="w-full"
+                />
+                <p className="text-sm text-gray-500 mt-2">Enter 0 or 1</p>
+              </div>
             </div>
 
             <div>
               <Label htmlFor="loan_cost_high">Loan cost-high? Ask members.</Label>
               <Input
-                type="number"
                 id="loan_cost_high"
-                value={formData.loan_cost_high || ""}
-                onChange={(e) => setFormData({ ...formData, loan_cost_high: e.target.value })}
+                type="number"
+                value={formData.loan_cost_high !== undefined ? formData.loan_cost_high : ""}
+                onChange={(e) => {
+                  const numValue = parseInt(e.target.value)
+                  if (!isNaN(numValue) && numValue >= 0) {
+                    setFormData({ ...formData, loan_cost_high: numValue })
+                  } else if (e.target.value === "") {
+                    setFormData({ ...formData, loan_cost_high: undefined })
+                  }
+                }}
                 placeholder="0"
                 min="0"
                 className="w-full"

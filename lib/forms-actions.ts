@@ -22,14 +22,14 @@ export interface FormSubmission {
   members_received_loans: number
   date_loan_received: string
   members_complaining_delay: number
-  loan_uses: string
+  loan_uses: number
   loan_default: number
   loan_delinquency: number
   loan_dropout: number
   money_fraud: number
   trust_erosion: string
   documentation_delay: string
-  loan_cost_barriers: string
+  loan_cost_high: number
   number_of_groups: number
   members_at_start: number
   members_at_end: number
@@ -92,14 +92,14 @@ export async function saveDraftForm(userId: string, formData: any) {
       members_received_loans: Number.parseInt(formData.members_received_loans) || 0,
       date_loan_received: formData.date_loan_received || null,
       members_complaining_delay: Number.parseInt(formData.members_complaining_delay) || 0,
-      loan_uses: formData.loan_uses || "",
+      loan_uses: Number.parseInt(formData.loan_uses) || 0,
       loan_default: Number.parseFloat(formData.loan_default) || 0,
       loan_delinquency: Number.parseFloat(formData.loan_delinquency) || 0,
       loan_dropout: Number.parseInt(formData.loan_dropout) || 0,
       money_fraud: Number.parseInt(formData.money_fraud) || 0,
       trust_erosion: formData.trust_erosion || "",
       documentation_delay: formData.documentation_delay || "",
-      loan_cost_barriers: formData.loan_cost_barriers || "",
+      loan_cost_high: Number.parseInt(formData.loan_cost_high) || 0,
       number_of_groups: Number.parseInt(formData.number_of_groups) || 0,
       members_at_start: Number.parseInt(formData.members_at_start) || 0,
       members_at_end: Number.parseInt(formData.members_at_end) || 0,
@@ -191,14 +191,14 @@ export async function submitForm(userId: string, formData: any) {
       members_received_loans: Number.parseInt(formData.members_received_loans) || 0,
       date_loan_received: formData.date_loan_received || null,
       members_complaining_delay: Number.parseInt(formData.members_complaining_delay) || 0,
-      loan_uses: formData.loan_uses || "",
+      loan_uses: Number.parseInt(formData.loan_uses) || 0,
       loan_default: Number.parseFloat(formData.loan_default) || 0,
       loan_delinquency: Number.parseFloat(formData.loan_delinquency) || 0,
       loan_dropout: Number.parseInt(formData.loan_dropout) || 0,
       money_fraud: Number.parseInt(formData.money_fraud) || 0,
       trust_erosion: formData.trust_erosion || "",
       documentation_delay: formData.documentation_delay || "",
-      loan_cost_barriers: formData.loan_cost_barriers || "",
+      loan_cost_high: Number.parseInt(formData.loan_cost_high) || 0,
       number_of_groups: Number.parseInt(formData.number_of_groups) || 0,
       members_at_start: Number.parseInt(formData.members_at_start) || 0,
       members_at_end: Number.parseInt(formData.members_at_end) || 0,

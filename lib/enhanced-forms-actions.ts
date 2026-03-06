@@ -38,14 +38,14 @@ export interface FormSubmission {
   members_received_loans?: number
   date_loan_received?: string
   members_complaining_delay?: number
-  loan_uses?: string
+  loan_uses?: number
   loan_default?: number
   loan_delinquency?: number
   loan_dropout?: number
   money_fraud?: number
   trust_erosion?: string
   documentation_delay?: string
-  loan_cost_high?: number // Changed from string to number
+  loan_cost_high?: number // 0 or 1
   explain_barriers?: string
   number_of_groups?: number
   members_at_start?: number
@@ -81,14 +81,14 @@ function extractFormFields(formData: any): any {
     members_received_loans: formData.members_received_loans || 0,
     date_loan_received: formData.date_loan_received || null,
     members_complaining_delay: formData.members_complaining_delay || 0,
-    loan_uses: formData.loan_uses || null,
+    loan_uses: formData.loan_uses || 0,
     loan_default: formData.loan_default || 0,
     loan_delinquency: formData.loan_delinquency || 0,
     loan_dropout: formData.loan_dropout || 0,
     money_fraud: formData.money_fraud || 0,
     trust_erosion: formData.trust_erosion || null,
     documentation_delay: formData.documentation_delay || null,
-    loan_cost_high: formData.loan_cost_high || 0, // Changed from string to number
+    loan_cost_high: formData.loan_cost_high ?? 0, // 0 or 1
     explain_barriers: formData.explain_barriers || null,
     number_of_groups: formData.number_of_groups || 0,
     members_at_start: formData.members_at_start || 0,
@@ -477,7 +477,7 @@ export async function submitForm(userId: string, formData: any) {
       bros_at_start: formData.bros_at_start ? parseInt(formData.bros_at_start) || 0 : 0,
       bros_at_end: formData.bros_at_end ? parseInt(formData.bros_at_end) || 0 : 0,
       credit_sources: formData.credit_sources || null,
-      loan_uses: formData.loan_uses || null,
+      loan_uses: formData.loan_uses ? parseInt(formData.loan_uses) || 0 : 0,
       trust_erosion: formData.trust_erosion || null,
       documentation_delay: formData.documentation_delay || null,
       loan_cost_high: formData.loan_cost_high ? parseInt(formData.loan_cost_high) || 0 : 0,
@@ -669,7 +669,16 @@ export async function approveForm(formId: string, programOfficerId: string) {
     // First, fetch the form data before updating
     const { data: formData, error: fetchError } = await supabaseAdmin
       .from("form_submissions")
-      .select("id, branch_id, form_data, status, project_id")
+      .select(
+        `id, branch_id, status, project_id,
+        group_name, location, credit_sources, num_mfis, groups_bank_account,
+        members_bank_account, inactive_accounts, num_insurers, members_insurance,
+        borrowed_groups, members_applying_loans, loan_amount_applied, date_loan_applied,
+        loan_amount_approved, members_received_loans, date_loan_received,
+        members_complaining_delay, loan_uses, loan_default, loan_delinquency,
+        loan_dropout, money_fraud, trust_erosion, documentation_delay, loan_cost_high,
+        number_of_groups, members_at_start, members_at_end, bros_at_start, bros_at_end`
+      )
       .eq("id", formId)
       .single()
 
@@ -705,17 +714,55 @@ export async function approveForm(formId: string, programOfficerId: string) {
     console.log("Form approved successfully, status updated to:", updatedForm.status)
 
     // Now aggregate to branch report
-    if (formData.branch_id && formData.form_data) {
+    if (formData.branch_id) {
       console.log(
         "Starting aggregation to branch report for branch:",
         formData.branch_id,
         "project:",
         formData.project_id,
       )
+
+      // Extract all the fields directly from formData (they are individual columns)
+      const extractedFormData = {
+        group_name: formData.group_name || "",
+        location: formData.location || "",
+        credit_sources: formData.credit_sources || 0,
+        num_mfis: formData.num_mfis || 0,
+        groups_bank_account: formData.groups_bank_account || 0,
+        members_bank_account: formData.members_bank_account || 0,
+        inactive_accounts: formData.inactive_accounts || 0,
+        num_insurers: formData.num_insurers || 0,
+        members_insurance: formData.members_insurance || 0,
+        borrowed_groups: formData.borrowed_groups || 0,
+        members_applying_loans: formData.members_applying_loans || 0,
+        loan_amount_applied: formData.loan_amount_applied || 0,
+        date_loan_applied: formData.date_loan_applied || null,
+        loan_amount_approved: formData.loan_amount_approved || 0,
+        members_received_loans: formData.members_received_loans || 0,
+        date_loan_received: formData.date_loan_received || null,
+        members_complaining_delay: formData.members_complaining_delay || 0,
+        loan_uses: formData.loan_uses || 0,
+        loan_default: formData.loan_default || 0,
+        loan_delinquency: formData.loan_delinquency || 0,
+        loan_dropout: formData.loan_dropout || 0,
+        money_fraud: formData.money_fraud || 0,
+        trust_erosion: formData.trust_erosion || "",
+        documentation_delay: formData.documentation_delay || "",
+        loan_cost_high: formData.loan_cost_high || 0,
+        explain_barriers: formData.explain_barriers || "",
+        number_of_groups: formData.number_of_groups || 0,
+        members_at_start: formData.members_at_start || 0,
+        members_at_end: formData.members_at_end || 0,
+        bros_at_start: formData.bros_at_start || 0,
+        bros_at_end: formData.bros_at_end || 0,
+      }
+
+      console.log("[v0] Extracted form data for aggregation:", extractedFormData)
+
       const aggregationResult = await aggregateFormToBranchReport(
         formId,
         formData.branch_id,
-        formData.form_data,
+        extractedFormData,
         formData.project_id || undefined,
       )
 
@@ -727,7 +774,7 @@ export async function approveForm(formId: string, programOfficerId: string) {
         console.log("✓ Form successfully aggregated to branch report")
       }
     } else {
-      console.warn("⚠️ Form has no branch_id or form_data, skipping aggregation")
+      console.warn("⚠️ Form has no branch_id, skipping aggregation")
     }
 
     revalidatePath("/program-officer/forms")
@@ -834,7 +881,7 @@ export async function updateFormByProgramOfficer(formId: string, programOfficerI
       bros_at_start: typeof formData.bros_at_start === "number" ? formData.bros_at_start : parseInt(formData.bros_at_start) || 0,
       bros_at_end: typeof formData.bros_at_end === "number" ? formData.bros_at_end : parseInt(formData.bros_at_end) || 0,
       credit_sources: formData.credit_sources || null,
-      loan_uses: formData.loan_uses || null,
+      loan_uses: typeof formData.loan_uses === "number" ? formData.loan_uses : parseInt(formData.loan_uses) || 0,
       trust_erosion: formData.trust_erosion || null,
       documentation_delay: formData.documentation_delay || null,
       loan_cost_high: typeof formData.loan_cost_high === "number" ? formData.loan_cost_high : parseInt(formData.loan_cost_high) || 0,

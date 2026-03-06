@@ -1,7 +1,22 @@
 "use server"
 
 import { supabaseAdmin } from "@/lib/supabase-admin"
-import { calculateAllBarriersKRIValues, type BarriersKRIValues, type BranchReportData } from "./barriers-kri-calculations"
+import {
+  calculateAllBarriersKRIValues,
+  calculateSubFactorIncomeLevel,
+  calculateSubFactorDistance,
+  calculateSubFactorTrust,
+  calculateSubFactorCosts,
+  calculateSubFactorRegistration,
+  calculateSubFactorSocialCultural,
+  calculateSubFactorFinancialLiteracy,
+  calculateKPIValueChainDiversification,
+  calculateKPIStartupLevelRate,
+  calculateKPIAccelerationLevelRate,
+  calculateBarriersMainValue,
+  type BarriersKRIValues,
+  type BranchReportData,
+} from "./barriers-kri-calculations"
 
 export interface BarriersData {
   projectId: string
@@ -54,12 +69,37 @@ export async function upsertBarriersWithKRIs(
       return { success: false, error: "projectId and branchId are required for Barriers KRI calculation" }
     }
 
-    console.log("[v0] Calculating Barriers KRIs for project:", actualProjectId, "branch:", actualBranchId)
+    console.log("[v0] Calculating Barriers metrics for project:", actualProjectId, "branch:", actualBranchId)
 
     // Calculate all Barriers KRI values
     const kriValues: BarriersKRIValues = await calculateAllBarriersKRIValues(branchReportData)
+    
+    // Calculate Sub-Factor values
+    const subFactorIncomeLevel = await calculateSubFactorIncomeLevel(branchReportData)
+    const subFactorDistance = await calculateSubFactorDistance(branchReportData)
+    const subFactorTrust = await calculateSubFactorTrust(branchReportData)
+    const subFactorCosts = await calculateSubFactorCosts(branchReportData)
+    const subFactorRegistration = await calculateSubFactorRegistration(branchReportData)
+    const subFactorSocialCultural = await calculateSubFactorSocialCultural(branchReportData)
+    const subFactorFinancialLiteracy = await calculateSubFactorFinancialLiteracy(branchReportData)
+    
+    // Calculate KPI values
+    const kpiValueChainDiversification = await calculateKPIValueChainDiversification(branchReportData)
+    const kpiStartupLevelRate = await calculateKPIStartupLevelRate(branchReportData)
+    const kpiAccelerationLevelRate = await calculateKPIAccelerationLevelRate(branchReportData)
+    
+    // Calculate main Barriers Value
+    const barriersMainValue = await calculateBarriersMainValue(branchReportData)
 
-    console.log("[v0] Calculated Barriers KRI values:", kriValues)
+    console.log("[v0] Calculated Barriers metrics - Main Value:", barriersMainValue, "Sub-Factors:", {
+      incomeLevel: subFactorIncomeLevel,
+      distance: subFactorDistance,
+      trust: subFactorTrust,
+      costs: subFactorCosts,
+      registration: subFactorRegistration,
+      socialCultural: subFactorSocialCultural,
+      financialLiteracy: subFactorFinancialLiteracy,
+    })
 
     // Check if Barriers row exists for this (project_id + branch_id) combination
     const { data: existingBarriers, error: fetchError } = await supabaseAdmin
@@ -79,6 +119,21 @@ export async function upsertBarriersWithKRIs(
       "Project ID": actualProjectId,
       "Branch ID": actualBranchId,
       created_at: branchReportData.created_at || new Date().toISOString(),
+      "BARRIERS_Value": barriersMainValue,
+      "Barriers_Actual_Data": barriersMainValue,
+      // Sub-Factors
+      "SUB FACTOR: INCOME LEVEL_Value": subFactorIncomeLevel,
+      "SUB FACTOR: DISTANCE_Value": subFactorDistance,
+      "SUB FACTOR: TRUST_Value": subFactorTrust,
+      "SUB FACTOR: COSTS_Value": subFactorCosts,
+      "SUB FACTOR: REGISTRATION_Value": subFactorRegistration,
+      "SUB FACTOR: SOCIAL AND CULTURAL FACTORS_Value": subFactorSocialCultural,
+      "SUB FACTOR: FINANCIAL LITERACY_Value": subFactorFinancialLiteracy,
+      // KPIs
+      "KPI: VALUE CHAIN DIVERSIFICATION RATE_Value": kpiValueChainDiversification,
+      "KPI: STARTUP LEVEL RATE_Value": kpiStartupLevelRate,
+      "KPI: ACCELERATION LEVEL RATE_Value": kpiAccelerationLevelRate,
+      // KRIs
       "KRI: FRAUD INCIDENT RATE_Value": kriValues.kriFraudIncidentRateValue,
       "KRI: TRUST EROSION IN MFIs_Value": kriValues.kriTrustErosionValue,
       "KRI: MEMBERS LOAN COST_Value": kriValues.kriMembersLoanCostValue,
@@ -87,9 +142,9 @@ export async function upsertBarriersWithKRIs(
       "KRI: DOCUMENTATION DELAY RATE_Value": kriValues.kriDocumentationDelayRateValue,
       "KRI: GENDER BASED BARRIER RATE_Value": kriValues.kriGenderBasedBarrierRateValue,
       "KRI: FAMILY AND COMMUNITY BARRIER RATE_Value": kriValues.kriFamilyAndCommunityBarrierRateValue,
-      "KRI: TRAINEE DROPOUT RATE_Value": kriValues.kriTraineeDropoutRateValue,
-      "KRI: TRAINER DROPOUT RATE_Value": kriValues.kriTrainerDropoutRateValue,
-      "KRI: CURRICULUM RELEVANCE COMPLAINT RATE_Value": kriValues.kriCurriculumRelevanceComplaintRateValue,
+      "KRI: TRAINEE DROPOUT RATE(1)_Value": kriValues.kriTraineeDropoutRateValue,
+      "KRI: TRAINER DROPOUT RATE(2)_Value": kriValues.kriTrainerDropoutRateValue,
+      "KRI: CARRICULUM RELEVANCE COMPLAINT RATE_Value": kriValues.kriCurriculumRelevanceComplaintRateValue,
       "KRI: LOW KNOWLEDGE RETENTION RATE_Value": kriValues.kriLowKnowledgeRetentionRateValue,
     }
 

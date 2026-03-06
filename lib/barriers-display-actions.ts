@@ -214,24 +214,19 @@ export async function fetchBarriersChartData() {
   try {
     console.log("[v0] Fetching barriers chart data from admin client")
 
-    // Fetch barriers data with all KRI values
+    // Fetch barriers data with all SUB FACTOR values
     const { data: barriersData, error: barriersError } = await supabaseAdmin.from("Barriers").select(`
         id,
         "Project ID",
         "Branch ID",
-        "KRI: FRAUD INCIDENT RATE_Value",
-        "KRI: TRUST EROSION IN MFIs_Value",
-        "KRI: MEMBERS LOAN COST_Value",
-        "KRI: HAND IN HAND LOAN COST_Value",
-        "KRI: MFI LOAN SERVICE COST_Value",
-        "KRI: DOCUMENTATION DELAY RATE_Value",
-        "KRI: GENDER BASED BARRIER RATE_Value",
-        "KRI: FAMILY AND COMMUNITY BARRIER RATE_Value",
-        "KRI: TRAINEE DROPOUT RATE_Value",
-        "KRI: TRAINER DROPOUT RATE_Value",
-        "KRI: CURRICULUM RELEVANCE COMPLAINT RATE_Value",
-        "KRI: LOW KNOWLEDGE RETENTION RATE_Value",
-        "Barriers_Actual_Data"
+        "SUB FACTOR: INCOME LEVEL_Value",
+        "SUB FACTOR: DISTANCE_Value",
+        "SUB FACTOR: TRUST_Value",
+        "SUB FACTOR: COSTS_Value",
+        "SUB FACTOR: REGISTRATION_Value",
+        "SUB FACTOR: SOCIAL AND CULTURAL FACTORS_Value",
+        "SUB FACTOR: FINANCIAL LITERACY_Value",
+        "BARRIERS_Value"
       `)
 
     if (barriersError) {

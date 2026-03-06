@@ -234,9 +234,24 @@ export default function BranchReportOfficerForms() {
       id: "loan_uses",
       name: "loan_uses",
       label: "Loan uses (write only members with 3 value chain activities)",
-      type: "textarea",
+      type: "number",
       required: true,
-      placeholder: "Describe loan uses for members with 3 value chain activities",
+      placeholder: "0",
+      properties: {
+        max: 1,
+        min: 0,
+      },
+    },
+    {
+      id: "loan_cost_high",
+      name: "loan_cost_high",
+      label: "Loan cost-high? Ask members.",
+      type: "number",
+      required: false,
+      placeholder: "0",
+      properties: {
+        min: 0,
+      },
     },
     {
       id: "loan_delinquency",
@@ -278,14 +293,6 @@ export default function BranchReportOfficerForms() {
       type: "number",
       required: false,
       placeholder: "0",
-    },
-    {
-      id: "loan_cost_high",
-      name: "loan_cost_high",
-      label: "Loan cost-high? Ask members.",
-      type: "number", // Changed from "textarea" to "number"
-      required: false,
-      placeholder: "0", // Changed placeholder to reflect numeric input
     },
     {
       id: "explain_barriers",
@@ -736,15 +743,36 @@ export default function BranchReportOfficerForms() {
       case "number":
       case "currency":
         return (
-          <Input
-            type="number"
-            value={value}
-            onChange={(e) => handleFieldChange(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={field.placeholder}
-            min="0"
-            className="w-full"
-          />
+          <div>
+            <Input
+              type="number"
+              value={value}
+              onChange={(e) => {
+                const numValue = parseInt(e.target.value)
+                const maxValue = field.properties?.max
+                const minValue = field.properties?.min ?? 0
+                if (!isNaN(numValue)) {
+                  if (maxValue !== undefined && numValue > maxValue) {
+                    handleFieldChange(String(maxValue))
+                  } else if (numValue < minValue) {
+                    handleFieldChange(String(minValue))
+                  } else {
+                    handleFieldChange(String(numValue))
+                  }
+                } else {
+                  handleFieldChange("")
+                }
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder={field.placeholder}
+              min={String(field.properties?.min ?? 0)}
+              max={field.properties?.max !== undefined ? String(field.properties.max) : undefined}
+              className="w-full"
+            />
+            {field.description && (
+              <p className="text-sm text-gray-500 mt-2">{field.description}</p>
+            )}
+          </div>
         )
       case "date":
         return (
