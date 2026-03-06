@@ -223,7 +223,6 @@ export async function aggregateFormToBranchReport(formId: string, branchId: stri
     return { success: false, error: `Unexpected error: ${error.message}` }
   }
 }
-}
 
 export async function getBranchReportData(branchId: string, projectId?: string) {
   try {
