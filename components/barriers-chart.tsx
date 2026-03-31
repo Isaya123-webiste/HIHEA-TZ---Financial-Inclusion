@@ -166,7 +166,7 @@ export default function BarriersChart({ selectedProjects, selectedBranches }: Ba
           <div className="flex justify-between items-start">
             <div>
               <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">{avgBarriersValue}%</CardTitle>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Average Sub Factor Score</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Barriers</p>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-rose-500"></div>
@@ -203,11 +203,11 @@ export default function BarriersChart({ selectedProjects, selectedBranches }: Ba
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-3xl font-bold text-slate-900 dark:text-white">{avgBarriersValue}%</CardTitle>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Average Sub Factor Score</p>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">Barriers</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-rose-500"></div>
-            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Barriers Sub Factors</span>
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Barriers</span>
           </div>
         </div>
       </CardHeader>

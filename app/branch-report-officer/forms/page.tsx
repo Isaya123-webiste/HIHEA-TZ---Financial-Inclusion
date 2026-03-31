@@ -114,9 +114,20 @@ export default function BranchReportOfficerForms() {
       id: "credit_sources",
       name: "credit_sources",
       label: "Credit sources/ Bank /MFIs Name",
-      type: "text",
+      type: "select",
       required: true,
-      placeholder: "Enter credit sources, bank or MFI names",
+      options: [
+        "Table Banking",
+        "Vision Fund Tanzania",
+        "CRDB Imbeju",
+        "Mwanga Hakika Bank",
+        "Government Loans",
+        "ASA",
+        "Brac",
+        "PASS Trust",
+        "NMB",
+      ],
+      placeholder: "Select credit source",
     },
     {
       id: "num_mfis",
@@ -189,7 +200,6 @@ export default function BranchReportOfficerForms() {
       type: "currency",
       required: true,
       placeholder: "0",
-      description: "Amount in Tanzanian Shillings (TZS)",
     },
     {
       id: "date_loan_applied",
@@ -205,7 +215,6 @@ export default function BranchReportOfficerForms() {
       type: "currency",
       required: true,
       placeholder: "0",
-      description: "Amount in Tanzanian Shillings (TZS)",
     },
     {
       id: "members_received_loans",
@@ -260,7 +269,6 @@ export default function BranchReportOfficerForms() {
       type: "currency",
       required: true,
       placeholder: "0",
-      description: "Amount in Tanzanian Shillings (TZS)",
     },
     {
       id: "loan_dropout",
