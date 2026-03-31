@@ -10,8 +10,10 @@ import UsageChart from "@/components/usage-chart"
 import FactorsFilterBar from "@/components/factors-filter-bar"
 import AccessTable from "@/components/access-table"
 import BarriersChart from "@/components/barriers-chart"
+import FINDEXCard from "@/components/findex-card"
+import TotalLoansCard from "@/components/total-loans-card"
 import PageHeader from "@/components/page-header"
-import DarkModeToggle from "@/components/dark-mode-toggle" // Import DarkModeToggle
+import DarkModeToggle from "@/components/dark-mode-toggle"
 
 export default function AdminDashboard() {
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -379,6 +381,8 @@ export default function AdminDashboard() {
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 gap-8">
+          <FINDEXCard selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
+          <TotalLoansCard selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
           <UsageChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
           <AccessTable selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
           <BarriersChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} />

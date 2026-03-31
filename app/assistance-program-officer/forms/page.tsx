@@ -293,7 +293,6 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
                 }
                 placeholder="0"
               />
-              <p className="text-sm text-gray-500 mt-1">Amount in Tanzanian Shillings (TZS)</p>
             </div>
 
             <div>
@@ -317,7 +316,6 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
                 }
                 placeholder="0"
               />
-              <p className="text-sm text-gray-500 mt-1">Amount in Tanzanian Shillings (TZS)</p>
             </div>
 
             <div>
@@ -367,7 +365,6 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
                 onChange={(e) => setFormData({ ...formData, loan_default: Number.parseFloat(e.target.value) || 0 })}
                 placeholder="0"
               />
-              <p className="text-sm text-gray-500 mt-1">Amount in Tanzanian Shillings (TZS)</p>
             </div>
 
             <div>
@@ -379,7 +376,6 @@ const EditFormDialog: React.FC<EditFormDialogProps> = ({ form, isOpen, onClose, 
                 onChange={(e) => setFormData({ ...formData, loan_delinquency: Number.parseFloat(e.target.value) || 0 })}
                 placeholder="0"
               />
-              <p className="text-sm text-gray-500 mt-1">Amount in Tanzanian Shillings (TZS)</p>
             </div>
 
             <div>

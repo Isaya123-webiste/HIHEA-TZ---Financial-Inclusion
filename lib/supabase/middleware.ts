@@ -26,12 +26,30 @@ export async function updateSession(request: NextRequest) {
   )
 
   try {
-    // This refreshes the session if needed and prevents auth issues
-    await supabase.auth.getUser()
+    // Only attempt session refresh for routes that need authentication
+    // Skip refresh for API routes and static assets (they're already filtered in matcher)
+    const pathname = request.nextUrl.pathname
+    const shouldRefreshSession = !pathname.startsWith('/login') && !pathname.startsWith('/register')
+    
+    if (shouldRefreshSession) {
+      // Use a timeout to prevent lock contention from blocking requests
+      // Set a shorter timeout to fail fast on lock conflicts
+      const timeoutPromise = new Promise<void>((_, reject) => 
+        setTimeout(() => reject(new Error('Session refresh timeout')), 2000)
+      )
+      
+      await Promise.race([
+        supabase.auth.getUser(),
+        timeoutPromise
+      ])
+    }
   } catch (error) {
     // Ignore session errors - they will be handled by individual pages
-    // This prevents middleware from blocking requests when sessions are invalid
-    console.log("[v0] Middleware: Session refresh error (this is OK):", error)
+    // Lock errors and AbortErrors are expected in concurrent scenarios and are safe to ignore
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    if (!errorMsg.includes('Lock') && !errorMsg.includes('AbortError') && !errorMsg.includes('timeout')) {
+      console.log("[v0] Middleware: Unexpected session error:", errorMsg)
+    }
   }
 
   return supabaseResponse
