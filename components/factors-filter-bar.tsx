@@ -20,6 +20,8 @@ interface FactorsFilterBarProps {
   setSelectedProjects: (projects: Set<string>) => void
   selectedBranches: Set<string>
   setSelectedBranches: (branches: Set<string>) => void
+  userRole?: string
+  userBranchId?: string
 }
 
 export default function FactorsFilterBar({
@@ -27,6 +29,8 @@ export default function FactorsFilterBar({
   setSelectedProjects,
   selectedBranches,
   setSelectedBranches,
+  userRole,
+  userBranchId,
 }: FactorsFilterBarProps) {
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([])
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([])
@@ -36,6 +40,7 @@ export default function FactorsFilterBar({
   // Special IDs for "All" options
   const ALL_BRANCHES_ID = "all-branches"
   const ALL_PROJECTS_ID = "all-projects"
+  const isNonAdmin = userRole && userRole !== "admin"
 
   useEffect(() => {
     async function loadFilters() {
@@ -45,16 +50,26 @@ export default function FactorsFilterBar({
           setProjects(result.projects || [])
           setBranches(result.branches || [])
 
-          // Default to "All" options
-          setSelectedBranches(new Set([ALL_BRANCHES_ID]))
-          setSelectedProjects(new Set([ALL_PROJECTS_ID]))
+          // For non-admin users, auto-lock to their branch
+          if (isNonAdmin && userBranchId) {
+            setSelectedBranches(new Set([userBranchId]))
+            // Auto-select all projects from their branch
+            const branchProjects = (result.projects || []).filter((p) => p.id.startsWith(userBranchId))
+            setSelectedProjects(
+              branchProjects.length > 0 ? new Set(branchProjects.map((p) => p.id)) : new Set([ALL_PROJECTS_ID]),
+            )
+          } else {
+            // Default to "All" options for admin
+            setSelectedBranches(new Set([ALL_BRANCHES_ID]))
+            setSelectedProjects(new Set([ALL_PROJECTS_ID]))
+          }
         }
       } finally {
         setLoading(false)
       }
     }
     loadFilters()
-  }, [setSelectedProjects, setSelectedBranches])
+  }, [setSelectedProjects, setSelectedBranches, isNonAdmin, userBranchId])
 
   const handleBranchToggle = (branchId: string) => {
     const newBranches = new Set(selectedBranches)
@@ -148,13 +163,14 @@ export default function FactorsFilterBar({
           {/* Branch Multi-Select */}
           <div className="flex-1">
             <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2 block">
-              Branch
+              Branch {isNonAdmin && <span className="text-red-500">(Locked)</span>}
             </label>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+              <DropdownMenuTrigger asChild disabled={isNonAdmin}>
                 <Button
                   variant="outline"
-                  className="w-full h-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-600 justify-between"
+                  disabled={isNonAdmin}
+                  className="w-full h-12 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-600 justify-between disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <span className="truncate">{getBranchLabel()}</span>
                   <ChevronDown className="w-4 h-4 ml-2 flex-shrink-0" />
