@@ -47,19 +47,26 @@ export default function FactorsFilterBar({
       try {
         const result = await fetchUsageChartData()
         if (result.success) {
-          setProjects(result.projects || [])
-          setBranches(result.branches || [])
+          const allProjects = result.projects || []
+          const allBranches = result.branches || []
 
-          // For non-admin users, auto-lock to their branch
+          // For non-admin users, filter projects to only show their branch's projects
           if (isNonAdmin && userBranchId) {
+            // Filter projects to only show projects belonging to the user's branch
+            const branchProjects = allProjects.filter((p: any) => p.branch_id === userBranchId)
+
+            setProjects(branchProjects)
+            setBranches(allBranches)
             setSelectedBranches(new Set([userBranchId]))
+
             // Auto-select all projects from their branch
-            const branchProjects = (result.projects || []).filter((p) => p.id.startsWith(userBranchId))
             setSelectedProjects(
               branchProjects.length > 0 ? new Set(branchProjects.map((p) => p.id)) : new Set([ALL_PROJECTS_ID]),
             )
           } else {
-            // Default to "All" options for admin
+            // Admin sees all projects and branches
+            setProjects(allProjects)
+            setBranches(allBranches)
             setSelectedBranches(new Set([ALL_BRANCHES_ID]))
             setSelectedProjects(new Set([ALL_PROJECTS_ID]))
           }

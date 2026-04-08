@@ -23,8 +23,10 @@ export async function fetchUsageChartData() {
       throw usageError
     }
 
-    // Fetch all projects
-    const { data: projectsData, error: projectsError } = await supabaseAdmin.from("projects").select("id, name")
+    // Fetch all projects with branch_id
+    const { data: projectsData, error: projectsError } = await supabaseAdmin
+      .from("projects")
+      .select("id, name, branch_id")
 
     if (projectsError) {
       console.error("[v0] Error fetching projects:", projectsError)
