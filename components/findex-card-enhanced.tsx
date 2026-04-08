@@ -110,6 +110,9 @@ export default function FINDEXCardEnhanced({
   }, [])
 
   const filtered = useMemo(() => {
+    const ALL_BRANCHES_ID = "all-branches"
+    const ALL_PROJECTS_ID = "all-projects"
+
     let filtered = entries
 
     // For non-admin users, auto-filter to their branch
@@ -118,9 +121,12 @@ export default function FINDEXCardEnhanced({
     }
 
     // Apply selected filters
+    const showAllBranches = selectedBranches.has(ALL_BRANCHES_ID) || selectedBranches.size === 0
+    const showAllProjects = selectedProjects.has(ALL_PROJECTS_ID) || selectedProjects.size === 0
+
     return filtered.filter((e) => {
-      const projectMatch = selectedProjects.size === 0 || selectedProjects.has(e.projectId)
-      const branchMatch = selectedBranches.size === 0 || selectedBranches.has(e.branchId)
+      const projectMatch = showAllProjects || selectedProjects.has(e.projectId)
+      const branchMatch = showAllBranches || selectedBranches.has(e.branchId)
       return projectMatch && branchMatch
     })
   }, [entries, selectedProjects, selectedBranches, isNonAdmin, userBranchId])
