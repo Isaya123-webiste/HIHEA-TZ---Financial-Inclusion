@@ -10,8 +10,8 @@ import UsageChart from "@/components/usage-chart"
 import FactorsFilterBar from "@/components/factors-filter-bar"
 import AccessTable from "@/components/access-table"
 import BarriersChart from "@/components/barriers-chart"
-import FINDEXCard from "@/components/findex-card"
-import TotalLoansCard from "@/components/total-loans-card"
+import FINDEXCardEnhanced from "@/components/findex-card-enhanced"
+import TotalLoansCardEnhanced from "@/components/total-loans-card-enhanced"
 import PageHeader from "@/components/page-header"
 import DarkModeToggle from "@/components/dark-mode-toggle"
 
@@ -376,13 +376,26 @@ export default function AdminDashboard() {
             setSelectedProjects={setSelectedProjects}
             selectedBranches={selectedBranches}
             setSelectedBranches={setSelectedBranches}
+            userRole="admin"
+          />
+        </div>
+
+        {/* Enhanced Cards with Gradients - Just Below Filters */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          <FINDEXCardEnhanced
+            selectedProjects={selectedProjects}
+            selectedBranches={selectedBranches}
+            userRole="admin"
+          />
+          <TotalLoansCardEnhanced
+            selectedProjects={selectedProjects}
+            selectedBranches={selectedBranches}
+            userRole="admin"
           />
         </div>
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 gap-8">
-          <FINDEXCard selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
-          <TotalLoansCard selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
           <UsageChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
           <AccessTable selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
           <BarriersChart selectedProjects={selectedProjects} selectedBranches={selectedBranches} />
