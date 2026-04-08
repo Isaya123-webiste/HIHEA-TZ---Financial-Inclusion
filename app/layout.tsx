@@ -5,6 +5,7 @@ import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Noto_Sans_Symbols as Material_Symbols_Outlined } from "next/font/google"
 import { ThemeProvider } from "next-themes"
+import Script from "next/script"
 import "./globals.css"
 
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-plus-jakarta-sans" })
@@ -49,8 +50,9 @@ html {
   --font-material-symbols: ${materialSymbols.variable};
 }
         `}</style>
-        <script
-          suppressHydrationWarning
+        <Script
+          id="theme-script"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               try {
