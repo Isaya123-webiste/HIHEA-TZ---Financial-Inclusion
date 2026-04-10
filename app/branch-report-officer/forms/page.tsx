@@ -48,6 +48,7 @@ import {
   type FormSubmission,
 } from "@/lib/enhanced-forms-actions"
 import ConfirmationDialog from "@/components/confirmation-dialog"
+import RoleLayout from "@/components/role-layout"
 
 interface FormField {
   id: string
@@ -861,31 +862,13 @@ export default function BranchReportOfficerForms() {
   const progress = ((currentFieldIndex + 1) / formFields.length) * 100
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      {/* Sidebar */}
-      <div
-        className={`
-          fixed inset-y-0 left-0 z-50 w-16 transition-transform duration-300 lg:relative lg:translate-x-0
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-        `}
-        style={{ backgroundColor: "#009edb" }}
-      >
-        <div className="flex flex-col h-full">
-          <div className="flex items-center justify-center h-16">
-            <div className="bg-white p-2 rounded-lg">
-              <PieChart className="h-6 w-6" style={{ color: "#009edb" }} />
-            </div>
-          </div>
-
-          <nav className="flex-1 p-2 space-y-1">
-            {navigationItems.map((item, index) => (
-              <Link
-                key={index}
+    <RoleLayout userRole="branch_report_officer" userName={user?.email}>
+      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+        {/* Main Content - Forms List View */}
+        {!showCreateForm ? (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex h-20 items-center justify-between border-b bg-white px-6">
                 href={item.href}
                 className="flex items-center justify-center w-full p-3 rounded-lg text-white hover:bg-opacity-80 transition-colors"
                 title={item.label}

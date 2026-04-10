@@ -47,6 +47,7 @@ import {
   updateFormByProgramOfficer,
 } from "@/lib/enhanced-forms-actions"
 import { BarChart3 } from "lucide-react"
+import RoleLayout from "@/components/role-layout"
 
 interface EditFormDialogProps {
   form: FormSubmission
@@ -840,128 +841,41 @@ export default function ProgramOfficerFormsPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#009edb] border-t-transparent mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading forms...</p>
+      <RoleLayout userRole="program_officer">
+        <div className="flex h-full items-center justify-center bg-white">
+          <div className="text-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#009edb] border-t-transparent mx-auto"></div>
+            <p className="mt-2 text-gray-600">Loading forms...</p>
+          </div>
         </div>
-      </div>
+      </RoleLayout>
     )
   }
 
   if (error) {
     return (
-      <div className="flex h-screen items-center justify-center bg-white">
-        <Card className="w-full max-w-md">
-          <CardContent className="text-center space-y-4 p-6">
-            <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-red-600">Access Error</h2>
-            <p className="text-gray-600">{error}</p>
-            <Button onClick={() => router.push("/")} className="w-full bg-red-600 hover:bg-red-700">
-              Go to Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <RoleLayout userRole="program_officer">
+        <div className="flex h-full items-center justify-center bg-white">
+          <Card className="w-full max-w-md">
+            <CardContent className="text-center space-y-4 p-6">
+              <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-red-600">Access Error</h2>
+              <p className="text-gray-600">{error}</p>
+              <Button onClick={() => router.push("/")} className="w-full bg-red-600 hover:bg-red-700">
+                Go to Login
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </RoleLayout>
     )
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden" onClick={() => setSidebarOpen(false)} />
-      )}
-
-      {/* Sidebar */}
-      <div
-        className={`
-          fixed inset-y-0 left-0 z-50 bg-[#009edb] transition-all duration-300 lg:relative lg:translate-x-0
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-          ${sidebarCollapsed ? "w-16" : "w-64"}
-        `}
-      >
-        <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between h-16 px-4">
-            {!sidebarCollapsed && (
-              <div className="flex items-center gap-2">
-                <div className="bg-white p-2 rounded-lg shadow-md">
-                  <Target className="h-6 w-6 text-[#009edb]" />
-                </div>
-                <div className="text-white">
-                  <h2 className="font-semibold">Program Officer</h2>
-                  <p className="text-xs text-blue-100">HIH Financial</p>
-                </div>
-              </div>
-            )}
-            {sidebarCollapsed && (
-              <div className="flex items-center justify-center w-full">
-                <div className="bg-white p-2 rounded-lg shadow-md">
-                  <Target className="h-6 w-6 text-[#009edb]" />
-                </div>
-              </div>
-            )}
-
-            {/* Hamburger button for desktop */}
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg text-white hover:bg-blue-500 transition-colors"
-            >
-              {sidebarCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
-            </button>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
-            {navigationItems.map((item, index) => (
-              <Link
-                key={index}
-                href={item.href}
-                className={`
-                  flex items-center gap-3 w-full p-3 rounded-lg text-white transition-all duration-200
-                  ${item.active ? "bg-white/20 shadow-lg" : "hover:bg-white/10"}
-                  ${sidebarCollapsed ? "justify-center" : ""}
-                `}
-                title={sidebarCollapsed ? item.label : undefined}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!sidebarCollapsed && <span>{item.label}</span>}
-              </Link>
-            ))}
-          </nav>
-
-          {/* Bottom section */}
-          <div className="p-4">
-            <button
-              onClick={handleSignOut}
-              className={`
-                flex items-center gap-3 w-full p-3 rounded-lg text-white hover:bg-white/10 transition-colors
-                ${sidebarCollapsed ? "justify-center" : ""}
-              `}
-              title={sidebarCollapsed ? "Sign Out" : undefined}
-            >
-              <LogOut className="h-5 w-5 flex-shrink-0" />
-              {!sidebarCollapsed && <span>Sign Out</span>}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Mobile Header */}
-        <div className="flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden shadow-sm">
-          <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-5 w-5" />
-          </Button>
-          <h1 className="font-semibold text-gray-900">Forms</h1>
-          <div className="w-8" />
-        </div>
-
-        {/* Desktop Header */}
-        <div className="hidden lg:flex h-20 items-center justify-between border-b bg-white px-6">
+    <RoleLayout userRole="program_officer" userName={profile?.full_name}>
+      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+        {/* Header */}
+        <div className="flex h-20 items-center justify-between border-b bg-white px-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Branch Report Forms</h1>
             <p className="text-gray-600 text-sm mt-1">Review and manage forms submitted by Branch Report Officers</p>
@@ -1149,17 +1063,18 @@ export default function ProgramOfficerFormsPage() {
         </div>
       </div>
 
-      {/* Edit Form Dialog */}
-      {editingForm && (
-        <EditFormDialog
-          form={editingForm}
-          isOpen={!!editingForm}
-          onClose={() => setEditingForm(null)}
-          onSave={handleSaveForm}
-          onSendBack={handleSendBack}
-          onApprove={handleApprove}
-        />
-      )}
-    </div>
+        {/* Edit Form Dialog */}
+        {editingForm && (
+          <EditFormDialog
+            form={editingForm}
+            isOpen={!!editingForm}
+            onClose={() => setEditingForm(null)}
+            onSave={handleSaveForm}
+            onSendBack={handleSendBack}
+            onApprove={handleApprove}
+          />
+        )}
+      </div>
+    </RoleLayout>
   )
 }
