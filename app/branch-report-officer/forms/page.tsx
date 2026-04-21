@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,10 +17,6 @@ import ProjectSelectionDialog from "@/components/project-selection-dialog"
 import {
   FileText,
   Plus,
-  PieChart,
-  LogOut,
-  Menu,
-  BarChart3,
   AlertCircle,
   CheckCircle,
   ArrowLeft,
@@ -69,7 +64,7 @@ export default function BranchReportOfficerForms() {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [currentFieldIndex, setCurrentFieldIndex] = useState(0)
   const [formData, setFormData] = useState<FormData>({})
@@ -458,11 +453,6 @@ export default function BranchReportOfficerForms() {
 
     performSearch()
   }, [searchTerm, dateFilter, groupFilter, statusFilter, forms])
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push("/")
-  }
 
   const handleAddForm = () => {
     setShowProjectSelection(true)
@@ -869,45 +859,20 @@ export default function BranchReportOfficerForms() {
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header */}
             <div className="flex h-20 items-center justify-between border-b bg-white px-6">
-                href={item.href}
-                className="flex items-center justify-center w-full p-3 rounded-lg text-white hover:bg-opacity-80 transition-colors"
-                title={item.label}
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Financial Inclusion Report Forms</h1>
+                <p className="text-gray-600 text-sm mt-1">Create and manage your monthly financial inclusion reports</p>
+              </div>
+              <Button
+                onClick={() => setShowCreateForm(true)}
+                className="bg-[#009edb] hover:bg-[#0087c0] text-white shadow-sm"
               >
-                <item.icon className="h-5 w-5" />
-              </Link>
-            ))}
-          </nav>
+                <Plus className="h-4 w-4 mr-2" />
+                New Form
+              </Button>
+            </div>
 
-          <div className="p-2">
-            <button
-              onClick={handleSignOut}
-              className="flex items-center justify-center w-full p-3 rounded-lg text-white hover:bg-opacity-80 transition-colors"
-              title="Sign Out"
-            >
-              <LogOut className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Mobile header */}
-        <div className="flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden">
-          <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-5 w-5" />
-          </Button>
-          <h1 className="font-semibold text-gray-900">Branch Report Officer</h1>
-          <div className="w-8" />
-        </div>
-
-        <div className="p-6 flex-1 overflow-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Financial Inclusion Report Forms</h1>
-            <p className="text-muted-foreground">Create and manage your monthly financial inclusion reports</p>
-          </div>
-
+            <div className="p-6 flex-1 overflow-auto">
           {/* Save Message */}
           {saveMessage && (
             <div className="mb-6">
@@ -1203,6 +1168,6 @@ export default function BranchReportOfficerForms() {
         cancelText="Cancel"
         variant="destructive"
       />
-    </div>
+    </RoleLayout>
   )
 }
