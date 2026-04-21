@@ -1,18 +1,18 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    "Missing Supabase environment variables. Please check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY",
-  )
-}
-
 // Client-side Supabase client (singleton pattern)
 let supabaseInstance: ReturnType<typeof createSupabaseClient> | null = null
 
 export function getSupabase() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      "Missing Supabase environment variables. Please check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    )
+  }
+
   if (!supabaseInstance) {
     supabaseInstance = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -25,7 +25,14 @@ export function getSupabase() {
   return supabaseInstance
 }
 
-export const supabase = getSupabase()
+export const supabase = {
+  get auth() { return getSupabase().auth },
+  get from() { return getSupabase().from.bind(getSupabase()) },
+  get storage() { return getSupabase().storage },
+  get functions() { return getSupabase().functions },
+  get realtime() { return getSupabase().realtime },
+  get rpc() { return getSupabase().rpc.bind(getSupabase()) },
+}
 
 // Database types
 export interface Database {

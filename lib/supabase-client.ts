@@ -17,5 +17,11 @@ export function createClient() {
   return createBrowserClient(supabaseUrl, supabaseAnonKey)
 }
 
-// Export a singleton instance for client components
-export const supabase = createClient()
+// Lazy singleton — only created on first access to avoid module-load throws
+let _supabaseInstance: ReturnType<typeof createClient> | null = null
+export const supabase = new Proxy({} as ReturnType<typeof createClient>, {
+  get(_target, prop) {
+    if (!_supabaseInstance) _supabaseInstance = createClient()
+    return (_supabaseInstance as any)[prop]
+  },
+})
