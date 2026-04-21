@@ -5,7 +5,6 @@ import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Noto_Sans_Symbols as Material_Symbols_Outlined } from "next/font/google"
 import { ThemeProvider } from "next-themes"
-import Script from "next/script"
 import "./globals.css"
 
 const plusJakartaSans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-plus-jakarta-sans" })
@@ -50,22 +49,7 @@ html {
   --font-material-symbols: ${materialSymbols.variable};
 }
         `}</style>
-        <Script
-          id="theme-script"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                const theme = localStorage.getItem('theme') || 'light';
-                if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                  document.documentElement.classList.add('dark');
-                } else {
-                  document.documentElement.classList.remove('dark');
-                }
-              } catch (e) {}
-            `,
-          }}
-        />
+
       </head>
       <body>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
