@@ -843,11 +843,6 @@ export default function BranchReportOfficerForms() {
     setStatusFilter("all")
   }
 
-  const navigationItems = [
-    { icon: BarChart3, label: "Dashboard", href: "/branch-report-officer" },
-    { icon: FileText, label: "Forms", href: "/branch-report-officer/forms" },
-  ]
-
   const currentField = formFields[currentFieldIndex]
   const progress = ((currentFieldIndex + 1) / formFields.length) * 100
 
