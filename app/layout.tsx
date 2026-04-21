@@ -40,17 +40,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${plusJakartaSans.variable} ${materialSymbols.variable}`} suppressHydrationWarning>
-      <head>
-        <style>{`
-html {
-  font-family: ${plusJakartaSans.style.fontFamily};
-  --font-sans: ${plusJakartaSans.variable};
-  --font-mono: ${GeistMono.variable};
-  --font-material-symbols: ${materialSymbols.variable};
-}
-        `}</style>
-
-      </head>
       <body>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           {children}
