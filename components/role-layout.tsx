@@ -71,7 +71,7 @@ const navigationItemsByRole = {
   ],
 }
 
-export default function RoleLayout({ children, userRole, userName = "User" }: RoleLayoutProps) {
+export function RoleLayout({ children, userRole, userName = "User" }: RoleLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(true)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const router = useRouter()

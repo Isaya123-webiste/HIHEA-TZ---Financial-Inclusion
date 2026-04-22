@@ -3,6 +3,9 @@
 import { supabaseAdmin } from "./supabase-admin"
 import { revalidatePath } from "next/cache"
 import { aggregateFormToBranchReport } from "./branch-report-aggregation"
+import { getUserProfile } from "./admin-actions"
+
+export { getUserProfile }
 
 // Form submission interface with extracted fields
 export interface FormSubmission {

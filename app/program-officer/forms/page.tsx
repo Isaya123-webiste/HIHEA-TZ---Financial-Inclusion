@@ -1,450 +1,97 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { RoleLayout } from "@/components/role-layout"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import {
-  Search,
-  FileText,
-  Edit,
-  AlertCircle,
-  Filter,
-  RefreshCw,
-  CheckCircle,
-  Save,
-  Send,
-  ArrowLeft,
-  Clock,
-  User,
-} from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
-import { getUserProfile } from "@/lib/auth"
-import {
-  getFormsByBranch,
-  getFormStatistics,
-  type FormSubmission,
-  sendFormBack,
-  approveForm,
-  updateFormByProgramOfficer,
-} from "@/lib/enhanced-forms-actions"
-import RoleLayout from "@/components/role-layout"
-import { FormFieldsEditor, formSubmissionToData } from "@/components/form-fields-editor"
+import { getUserProfile, getFormsByBranch, approveForm, sendFormBack } from "@/lib/enhanced-forms-actions"
 
-// ---------- Edit/Review Dialog ----------
-interface EditFormDialogProps {
-  form: FormSubmission
-  isOpen: boolean
-  onClose: () => void
-  onSave: (formData: any) => void
-  onSendBack: (reason: string) => void
-  onApprove: () => void
-}
-
-function EditFormDialog({ form, isOpen, onClose, onSave, onSendBack, onApprove }: EditFormDialogProps) {
-  const [formData, setFormData] = useState<Record<string, any>>({})
-  const [sendBackReason, setSendBackReason] = useState("")
-  const [showSendBackInput, setShowSendBackInput] = useState(false)
-  const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    if (form) setFormData(formSubmissionToData(form))
-  }, [form])
-
-  const handleChange = (key: string, value: any) => setFormData((prev) => ({ ...prev, [key]: value }))
-
-  const handleSave = async () => {
-    setSaving(true)
-    try { await onSave(formData); onClose() } finally { setSaving(false) }
-  }
-
-  const handleSendBack = () => {
-    if (sendBackReason.trim()) {
-      onSendBack(sendBackReason)
-      setSendBackReason("")
-      setShowSendBackInput(false)
-      onClose()
-    }
-  }
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Edit className="h-5 w-5" />
-            Review Form: {form?.group_name || "Unknown Group"}
-          </DialogTitle>
-          <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
-            <span className="flex items-center gap-1">
-              <User className="h-4 w-4" />
-              {form?.creator_name || "Branch Report Officer"}
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              {form?.submitted_at ? new Date(form.submitted_at).toLocaleDateString() : "Unknown"}
-            </span>
-            <Badge className={
-              form?.status === "submitted" ? "bg-blue-100 text-blue-800" :
-              form?.status === "approved" ? "bg-green-100 text-green-800" :
-              "bg-gray-100 text-gray-800"
-            }>
-              {form?.status}
-            </Badge>
-          </div>
-        </DialogHeader>
-
-        <FormFieldsEditor formData={formData} onChange={handleChange} readOnly={false} />
-
-        {showSendBackInput && (
-          <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg mt-4">
-            <Label htmlFor="sendback_reason">Reason for sending back *</Label>
-            <Textarea
-              id="sendback_reason"
-              value={sendBackReason}
-              onChange={(e) => setSendBackReason(e.target.value)}
-              placeholder="Please provide a reason for sending this form back..."
-              rows={3}
-              className="mt-2"
-            />
-          </div>
-        )}
-
-        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t mt-4">
-          <Button onClick={onClose} variant="outline" className="flex-1">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={saving} className="flex-1 bg-[#009edb] hover:bg-[#007bb5]">
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
-          {form?.status === "submitted" && (
-            <>
-              <Button onClick={() => { onApprove(); onClose() }} className="flex-1 bg-green-600 hover:bg-green-700">
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Approve
-              </Button>
-              {!showSendBackInput ? (
-                <Button onClick={() => setShowSendBackInput(true)} variant="outline" className="flex-1 text-orange-600 border-orange-600 hover:bg-orange-50">
-                  <Send className="h-4 w-4 mr-2" />
-                  Send Back
-                </Button>
-              ) : (
-                <Button onClick={handleSendBack} disabled={!sendBackReason.trim()} className="flex-1 bg-orange-600 hover:bg-orange-700">
-                  <Send className="h-4 w-4 mr-2" />
-                  Confirm Send Back
-                </Button>
-              )}
-            </>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-// ---------- Main Page ----------
-export default function ProgramOfficerFormsPage() {
-  const [forms, setForms] = useState<FormSubmission[]>([])
-  const [filteredForms, setFilteredForms] = useState<FormSubmission[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [profile, setProfile] = useState<any>(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [refreshing, setRefreshing] = useState(false)
-  const [message, setMessage] = useState("")
-  const [messageType, setMessageType] = useState<"success" | "error">("success")
-  const [statistics, setStatistics] = useState<any>(null)
-  const [editingForm, setEditingForm] = useState<FormSubmission | null>(null)
+export default function POFormsPage() {
   const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
+  const [forms, setForms] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function loadUserData() {
-      try {
-        setLoading(true)
-        const { data: { user }, error: userError } = await supabase.auth.getUser()
-        if (userError || !user) { router.push("/"); return }
+    loadData()
+  }, [])
 
-        const profileResult = await getUserProfile(user.id)
-        if (profileResult.error || !profileResult.profile) {
-          setError("Failed to load profile"); setLoading(false); return
-        }
-
-        const userProfile = profileResult.profile
-        if (userProfile.role !== "program_officer") { router.push("/"); return }
-
-        setProfile(userProfile)
-
-        if (!userProfile.branch_id) {
-          setError("No branch assigned. Please contact an administrator.")
-          setLoading(false); return
-        }
-
-        await loadForms(userProfile.branch_id)
-        const statsResult = await getFormStatistics(userProfile.branch_id)
-        if (statsResult.success) setStatistics(statsResult.data)
-      } catch {
-        setError("An unexpected error occurred")
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadUserData()
-  }, [router])
-
-  async function loadForms(branchId: string) {
-    setRefreshing(true)
+  const loadData = async () => {
     try {
-      const result = await getFormsByBranch(branchId)
-      if (result.success && result.data) {
-        setForms(result.data)
-        applyFilters(result.data, searchTerm, statusFilter)
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) {
+        router.push("/")
+        return
       }
+      setUser(authUser)
+      const profileData = await getUserProfile(authUser.id)
+      if (profileData?.profile) {
+        setProfile(profileData.profile)
+        const formsData = await getFormsByBranch(profileData.profile.branch_id)
+        setForms(formsData?.data || [])
+      }
+    } catch (err) {
+      console.error("Error:", err)
     } finally {
-      setRefreshing(false)
+      setLoading(false)
     }
   }
 
-  function applyFilters(data: FormSubmission[], search: string, status: string) {
-    let filtered = [...data]
-    if (status !== "all") filtered = filtered.filter((f) => f.status === status)
-    if (search.trim()) {
-      const lower = search.toLowerCase()
-      filtered = filtered.filter(
-        (f) =>
-          f.group_name?.toLowerCase().includes(lower) ||
-          f.location?.toLowerCase().includes(lower) ||
-          f.creator_name?.toLowerCase().includes(lower),
-      )
-    }
-    setFilteredForms(filtered)
-  }
-
-  useEffect(() => { applyFilters(forms, searchTerm, statusFilter) }, [searchTerm, statusFilter, forms])
-
-  function showMessage(msg: string, type: "success" | "error") {
-    setMessage(msg); setMessageType(type)
-    setTimeout(() => setMessage(""), 4000)
-  }
-
-  async function handleSave(formData: any) {
-    if (!editingForm || !profile) return
-    const result = await updateFormByProgramOfficer(editingForm.id, profile.id, formData)
-    if (result.success) {
-      showMessage("Form updated successfully", "success")
-      await loadForms(profile.branch_id)
-    } else {
-      showMessage(result.error || "Failed to update form", "error")
+  const handleApprove = async (formId: string) => {
+    try {
+      await approveForm(formId)
+      loadData()
+    } catch (err) {
+      console.error("Error:", err)
     }
   }
 
-  async function handleApprove() {
-    if (!editingForm || !profile) return
-    const result = await approveForm(editingForm.id, profile.id)
-    if (result.success) {
-      showMessage("Form approved successfully", "success")
-      await loadForms(profile.branch_id)
-    } else {
-      showMessage(result.error || "Failed to approve form", "error")
+  const handleSendBack = async (formId: string) => {
+    try {
+      await sendFormBack(formId, "Please review and resubmit")
+      loadData()
+    } catch (err) {
+      console.error("Error:", err)
     }
   }
 
-  async function handleSendBack(reason: string) {
-    if (!editingForm || !profile) return
-    const result = await sendFormBack(editingForm.id, profile.id, reason)
-    if (result.success) {
-      showMessage("Form sent back for revision", "success")
-      await loadForms(profile.branch_id)
-    } else {
-      showMessage(result.error || "Failed to send form back", "error")
-    }
-  }
-
-  const statusBadge = (status: string) => {
-    const map: Record<string, string> = {
-      draft: "bg-gray-100 text-gray-700",
-      submitted: "bg-blue-100 text-blue-700",
-      under_review: "bg-yellow-100 text-yellow-700",
-      approved: "bg-green-100 text-green-700",
-      rejected: "bg-red-100 text-red-700",
-      sent_back: "bg-orange-100 text-orange-700",
-    }
-    return map[status] || "bg-gray-100 text-gray-700"
-  }
-
-  if (loading) {
-    return (
-      <RoleLayout userRole="program_officer">
-        <div className="flex h-full items-center justify-center">
-          <div className="text-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#009edb] border-t-transparent mx-auto" />
-            <p className="mt-2 text-gray-600">Loading forms...</p>
-          </div>
-        </div>
-      </RoleLayout>
-    )
-  }
-
-  if (error) {
-    return (
-      <RoleLayout userRole="program_officer">
-        <div className="flex h-full items-center justify-center">
-          <Card className="w-full max-w-md">
-            <CardContent className="text-center space-y-4 p-6">
-              <AlertCircle className="h-12 w-12 text-red-600 mx-auto" />
-              <h2 className="text-xl font-semibold text-red-600">Error</h2>
-              <p className="text-gray-600">{error}</p>
-              <Button onClick={() => router.push("/program-officer")} className="w-full bg-[#009edb] hover:bg-[#0087c0]">
-                Back to Dashboard
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </RoleLayout>
-    )
-  }
+  if (loading) return <div className="flex items-center justify-center h-screen"><Loader2 className="animate-spin" /></div>
 
   return (
     <RoleLayout userRole="program_officer" userName={profile?.full_name}>
-      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
-        {/* Header */}
-        <div className="flex h-20 items-center justify-between border-b bg-white px-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Financial Inclusion Forms</h1>
-            <p className="text-gray-600 text-sm mt-1">Review and approve forms submitted by Branch Report Officers</p>
-          </div>
-          <Button onClick={() => loadForms(profile?.branch_id)} variant="outline" disabled={refreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-6">Forms to Review</h1>
 
-        <div className="flex-1 overflow-auto p-6 space-y-6">
-          {message && (
-            <Alert className={messageType === "success" ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
-              <AlertDescription className={messageType === "success" ? "text-green-700" : "text-red-700"}>
-                {message}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Stats */}
-          {statistics && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { label: "Total", value: statistics.total || 0, color: "bg-gray-100 text-gray-700" },
-                { label: "Submitted", value: statistics.submitted || 0, color: "bg-blue-100 text-blue-700" },
-                { label: "Approved", value: statistics.approved || 0, color: "bg-green-100 text-green-700" },
-                { label: "Sent Back", value: statistics.sent_back || 0, color: "bg-orange-100 text-orange-700" },
-              ].map((s) => (
-                <Card key={s.label} className="bg-white shadow-sm">
-                  <CardContent className="p-4">
-                    <p className="text-sm text-gray-500">{s.label}</p>
-                    <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search forms..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-44">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="submitted">Submitted</SelectItem>
-                <SelectItem value="under_review">Under Review</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="sent_back">Sent Back</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Forms List */}
-          {filteredForms.length === 0 ? (
-            <div className="text-center py-16">
-              <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">No forms found</h3>
-              <p className="text-gray-500 text-sm">
-                {searchTerm || statusFilter !== "all"
-                  ? "Try adjusting your filters"
-                  : "No forms have been submitted yet"}
-              </p>
-            </div>
+        <div className="grid gap-4">
+          {forms.filter(f => f.status === "submitted").length === 0 ? (
+            <Card className="p-8 text-center"><p className="text-gray-500">No forms to review</p></Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredForms.map((form) => (
-                <Card key={form.id} className="bg-white shadow-sm hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <CardTitle className="text-base font-semibold text-gray-900 line-clamp-2">
-                        {form.title || form.group_name || `Form ${form.id.slice(0, 8)}`}
-                      </CardTitle>
-                      <Badge className={`${statusBadge(form.status)} shrink-0 text-xs`}>
-                        {form.status.replace("_", " ")}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0 space-y-2">
-                    {form.location && (
-                      <p className="text-sm text-gray-600 truncate">{form.location}</p>
-                    )}
-                    {form.creator_name && (
-                      <p className="text-sm text-gray-500">By: {form.creator_name}</p>
-                    )}
-                    {form.submitted_at && (
-                      <p className="text-xs text-gray-400">
-                        {new Date(form.submitted_at).toLocaleDateString()}
-                      </p>
-                    )}
-                    <Button
-                      size="sm"
-                      onClick={() => setEditingForm(form)}
-                      className="w-full mt-2 bg-[#009edb] hover:bg-[#007bb5] text-white"
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      {form.status === "submitted" ? "Review" : "View"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            forms.map((form) => (
+              <Card key={form.id} className="p-4">
+                <div className="flex justify-between items-center mb-3">
+                  <div>
+                    <p className="font-semibold">{form.project_id}</p>
+                    <p className="text-sm text-gray-500">{new Date(form.created_at).toLocaleDateString()}</p>
+                  </div>
+                  <Badge>{form.status}</Badge>
+                </div>
+                {form.status === "submitted" && (
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => handleApprove(form.id)}>Approve</Button>
+                    <Button size="sm" variant="outline" onClick={() => handleSendBack(form.id)}>Send Back</Button>
+                    <Button size="sm" variant="ghost" onClick={() => router.push(`/program-officer/forms/${form.id}`)}>View</Button>
+                  </div>
+                )}
+              </Card>
+            ))
           )}
         </div>
       </div>
-
-      {editingForm && (
-        <EditFormDialog
-          form={editingForm}
-          isOpen={!!editingForm}
-          onClose={() => setEditingForm(null)}
-          onSave={handleSave}
-          onApprove={handleApprove}
-          onSendBack={handleSendBack}
-        />
-      )}
     </RoleLayout>
   )
 }
